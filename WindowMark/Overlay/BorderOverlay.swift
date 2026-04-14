@@ -21,7 +21,7 @@ final class BorderPanel: NSPanel {
         backgroundColor = .clear
         hasShadow = false
         ignoresMouseEvents = true
-        collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
+        collectionBehavior = [.fullScreenAuxiliary]
         isReleasedWhenClosed = false
 
         let borderView = NSView(frame: NSRect(origin: .zero, size: expandedFrame.size))
@@ -38,8 +38,7 @@ final class BorderPanel: NSPanel {
     func reposition(around windowFrame: NSRect) {
         let borderWidth: CGFloat = 3
         let expandedFrame = windowFrame.insetBy(dx: -borderWidth, dy: -borderWidth)
-        setFrame(expandedFrame, display: true)
-        contentView?.frame = NSRect(origin: .zero, size: expandedFrame.size)
+        setFrame(expandedFrame, display: false)
     }
 }
 
@@ -49,6 +48,7 @@ final class BorderPanel: NSPanel {
 final class BorderOverlayManager {
     private let windowManager: WindowManager
     private var panels: [CGWindowID: BorderPanel] = [:]
+    private var windowPIDs: [CGWindowID: pid_t] = [:]
     private var positionTimer: Timer?
 
     init(windowManager: WindowManager) {
@@ -64,6 +64,7 @@ final class BorderOverlayManager {
         for id in existingIDs.subtracting(currentIDs) {
             panels[id]?.orderOut(nil)
             panels.removeValue(forKey: id)
+            windowPIDs.removeValue(forKey: id)
         }
 
         // Add panels for newly marked windows
@@ -72,6 +73,7 @@ final class BorderOverlayManager {
             let panel = BorderPanel(frame: frame)
             panel.orderFrontRegardless()
             panels[window.id] = panel
+            windowPIDs[window.id] = window.pid
         }
 
         // Hide panels for minimized windows, show for non-minimized
@@ -87,11 +89,20 @@ final class BorderOverlayManager {
 
     /// Update positions of all overlay panels to match their target windows.
     func updatePositions() {
+        let onScreenIDs = windowManager.getLiveWindowIDs()
+        let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
+
         for (windowID, panel) in panels {
-            guard let frame = windowManager.getWindowFrame(windowID) else {
-                // Window not found — hide until next sync cleans it up
-                panel.orderOut(nil)
+            // Only show border when the window's app is frontmost and window is on screen
+            let ownerIsFront = windowPIDs[windowID] == frontPID
+            guard ownerIsFront,
+                  onScreenIDs.contains(windowID),
+                  let frame = windowManager.getWindowFrame(windowID) else {
+                if panel.isVisible { panel.orderOut(nil) }
                 continue
+            }
+            if !panel.isVisible {
+                panel.orderFrontRegardless()
             }
             panel.reposition(around: frame)
         }
@@ -119,6 +130,7 @@ final class BorderOverlayManager {
             panel.orderOut(nil)
         }
         panels.removeAll()
+        windowPIDs.removeAll()
     }
 
     // MARK: - Private
