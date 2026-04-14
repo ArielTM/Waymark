@@ -7,6 +7,7 @@ final class AppState: ObservableObject {
     let hotkeyManager: HotkeyManager
     let borderOverlayManager: BorderOverlayManager
     let gestureManager = GestureManager()
+    let paletteController = PalettePanelController()
     private var permissionTimer: Timer?
     private var cleanupTimer: Timer?
 
@@ -135,21 +136,11 @@ final class AppState: ObservableObject {
     }
 
     private func startBorderOverlay() {
-        // Wire move/resize notifications
-        watchlistManager.onWindowMoved = { [weak self] windowID in
-            MainActor.assumeIsolated {
-                self?.borderOverlayManager.windowDidMove(windowID)
-            }
-        }
-
-        // Start the fallback position timer
-        borderOverlayManager.startPositionTimer()
-
-        // Observe watchlist changes to sync panels
-        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.borderOverlayManager.sync(windows: self.watchlistManager.windows)
+                self.borderOverlayManager.update(windows: self.watchlistManager.windows)
+                self.paletteController.update(watchlistManager: self.watchlistManager)
             }
         }
     }
