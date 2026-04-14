@@ -1,0 +1,14 @@
+# Xcode
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+build/
+
+# xcodegen
+WindowMark.xcodeproj/
+
+# Brainstorming visual companion
+***REMOVED***
+
+# macOS
+.DS_Store

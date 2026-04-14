@@ -1,0 +1,28 @@
+name: WindowMark
+options:
+  bundleIdPrefix: com.local
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+  generateEmptyDirectories: true
+
+targets:
+  WindowMark:
+    type: application
+    platform: macOS
+    sources:
+      - WindowMark
+    settings:
+      base:
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_STYLE: Manual
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.WindowMark
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: targeted
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        INFOPLIST_FILE: WindowMark/Info.plist
+        CODE_SIGN_ENTITLEMENTS: WindowMark/WindowMark.entitlements
+        COMBINE_HIDPI_IMAGES: true
+        ENABLE_HARDENED_RUNTIME: false
+    entitlements:
+      path: WindowMark/WindowMark.entitlements
