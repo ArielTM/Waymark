@@ -5,7 +5,6 @@ import ApplicationServices
 
 final class BorderPanel: NSPanel {
     init(frame: NSRect) {
-        // Expand frame by border width so the border draws around the window, not on top
         let borderWidth: CGFloat = 3
         let expandedFrame = frame.insetBy(dx: -borderWidth, dy: -borderWidth)
 
@@ -16,7 +15,7 @@ final class BorderPanel: NSPanel {
             defer: true
         )
 
-        level = .floating
+        level = .normal
         isOpaque = false
         backgroundColor = .clear
         hasShadow = false
@@ -33,13 +32,6 @@ final class BorderPanel: NSPanel {
         borderView.layer?.cornerRadius = 10
         contentView = borderView
     }
-
-    /// Reposition the panel to surround the given window frame (in AppKit coordinates).
-    func reposition(around windowFrame: NSRect) {
-        let borderWidth: CGFloat = 3
-        let expandedFrame = windowFrame.insetBy(dx: -borderWidth, dy: -borderWidth)
-        setFrame(expandedFrame, display: false)
-    }
 }
 
 // MARK: - Border Overlay Manager
@@ -48,15 +40,14 @@ final class BorderPanel: NSPanel {
 final class BorderOverlayManager {
     private let windowManager: WindowManager
     private var panels: [CGWindowID: BorderPanel] = [:]
-    private var windowPIDs: [CGWindowID: pid_t] = [:]
-    private var positionTimer: Timer?
+    private let cgsConnection = CGSMainConnectionID()
 
     init(windowManager: WindowManager) {
         self.windowManager = windowManager
     }
 
-    /// Sync overlay panels with the current set of marked windows.
-    func sync(windows: [WatchedWindow]) {
+    /// Single update method: syncs panels with the watchlist, updates positions, and z-orders.
+    func update(windows: [WatchedWindow]) {
         let currentIDs = Set(windows.map(\.id))
         let existingIDs = Set(panels.keys)
 
@@ -64,81 +55,44 @@ final class BorderOverlayManager {
         for id in existingIDs.subtracting(currentIDs) {
             panels[id]?.orderOut(nil)
             panels.removeValue(forKey: id)
-            windowPIDs.removeValue(forKey: id)
         }
 
         // Add panels for newly marked windows
         for window in windows where !existingIDs.contains(window.id) {
             guard let frame = windowManager.getWindowFrame(window.id) else { continue }
             let panel = BorderPanel(frame: frame)
-            panel.orderFrontRegardless()
             panels[window.id] = panel
-            windowPIDs[window.id] = window.pid
         }
 
-        // Hide panels for minimized windows, show for non-minimized
-        for window in windows {
-            guard let panel = panels[window.id] else { continue }
-            if isMinimized(window) {
-                panel.orderOut(nil)
-            } else if !panel.isVisible {
-                panel.orderFrontRegardless()
-            }
-        }
-    }
-
-    /// Update positions of all overlay panels to match their target windows.
-    func updatePositions() {
+        // Update positions and z-order
         let onScreenIDs = windowManager.getLiveWindowIDs()
-        let frontPID = NSWorkspace.shared.frontmostApplication?.processIdentifier
 
         for (windowID, panel) in panels {
-            // Only show border when the window's app is frontmost and window is on screen
-            let ownerIsFront = windowPIDs[windowID] == frontPID
-            guard ownerIsFront,
-                  onScreenIDs.contains(windowID),
+            guard onScreenIDs.contains(windowID),
                   let frame = windowManager.getWindowFrame(windowID) else {
                 if panel.isVisible { panel.orderOut(nil) }
                 continue
             }
+
+            // Reposition
+            let borderWidth: CGFloat = 3
+            let expandedFrame = frame.insetBy(dx: -borderWidth, dy: -borderWidth)
+            panel.setFrame(expandedFrame, display: false)
+
+            // Show if hidden
             if !panel.isVisible {
                 panel.orderFrontRegardless()
             }
-            panel.reposition(around: frame)
-        }
-    }
 
-    /// Called when a specific window moves or resizes (from AXObserver).
-    func windowDidMove(_ windowID: CGWindowID) {
-        guard let panel = panels[windowID],
-              let frame = windowManager.getWindowFrame(windowID) else { return }
-        panel.reposition(around: frame)
-    }
-
-    func startPositionTimer() {
-        positionTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.updatePositions()
-            }
+            // Z-order: position directly above the target window
+            CGSOrderWindow(cgsConnection, Int32(panel.windowNumber), 1, Int32(windowID))
         }
     }
 
     func stop() {
-        positionTimer?.invalidate()
-        positionTimer = nil
         for panel in panels.values {
             panel.orderOut(nil)
         }
         panels.removeAll()
-        windowPIDs.removeAll()
-    }
-
-    // MARK: - Private
-
-    private func isMinimized(_ window: WatchedWindow) -> Bool {
-        guard let axElement = window.axElement else { return false }
-        var minimizedRef: CFTypeRef?
-        AXUIElementCopyAttributeValue(axElement, kAXMinimizedAttribute as CFString, &minimizedRef)
-        return (minimizedRef as? Bool) ?? false
     }
 }
