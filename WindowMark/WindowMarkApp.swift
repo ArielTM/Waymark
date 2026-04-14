@@ -6,6 +6,7 @@ final class AppState: ObservableObject {
     let watchlistManager: WatchlistManager
     let hotkeyManager: HotkeyManager
     let borderOverlayManager: BorderOverlayManager
+    let gestureManager = GestureManager()
     private var permissionTimer: Timer?
     private var cleanupTimer: Timer?
 
@@ -38,6 +39,8 @@ final class AppState: ObservableObject {
         startCleanupTimer()
         startAppTerminationObserver()
         startBorderOverlay()
+        wireGestures()
+        gestureManager.start()
     }
 
     private func wireHotkeys() {
@@ -114,6 +117,19 @@ final class AppState: ObservableObject {
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.watchlistManager.removeStaleWindows()
+            }
+        }
+    }
+
+    private func wireGestures() {
+        gestureManager.onSwipeRight = { [weak self] in
+            MainActor.assumeIsolated {
+                self?.watchlistManager.cycleNext()
+            }
+        }
+        gestureManager.onSwipeLeft = { [weak self] in
+            MainActor.assumeIsolated {
+                self?.watchlistManager.cyclePrev()
             }
         }
     }
