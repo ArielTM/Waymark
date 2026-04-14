@@ -15,6 +15,9 @@ final class WatchlistManager {
     let windowManager: WindowManager
     private var observers: [CGWindowID: AXObserver] = [:]
 
+    /// Called when a watched window moves or resizes. Used by BorderOverlayManager.
+    var onWindowMoved: ((CGWindowID) -> Void)?
+
     init(windowManager: WindowManager) {
         self.windowManager = windowManager
         WatchlistManager.shared = self
@@ -154,16 +157,25 @@ final class WatchlistManager {
         let pid = window.pid
         let windowID = window.id
 
-        // Create a raw pointer to the window ID for the callback context
-        let context = UnsafeMutableRawPointer.allocate(byteCount: MemoryLayout<CGWindowID>.size, alignment: MemoryLayout<CGWindowID>.alignment)
+        let context = UnsafeMutableRawPointer.allocate(
+            byteCount: MemoryLayout<CGWindowID>.size,
+            alignment: MemoryLayout<CGWindowID>.alignment
+        )
         context.storeBytes(of: windowID, as: CGWindowID.self)
 
-        let callback: AXObserverCallback = { _, element, notification, refcon in
+        let callback: AXObserverCallback = { _, _, notification, refcon in
             guard let refcon else { return }
             let wid = refcon.load(as: CGWindowID.self)
+            let name = notification as String
+
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    WatchlistManager.shared?.removeWindow(byID: wid)
+                    if name == kAXUIElementDestroyedNotification as String {
+                        WatchlistManager.shared?.removeWindow(byID: wid)
+                    } else {
+                        // kAXMovedNotification or kAXResizedNotification
+                        WatchlistManager.shared?.onWindowMoved?(wid)
+                    }
                 }
             }
         }
@@ -175,6 +187,8 @@ final class WatchlistManager {
         }
 
         AXObserverAddNotification(observer, axElement, kAXUIElementDestroyedNotification as CFString, context)
+        AXObserverAddNotification(observer, axElement, kAXMovedNotification as CFString, context)
+        AXObserverAddNotification(observer, axElement, kAXResizedNotification as CFString, context)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), AXObserverGetRunLoopSource(observer), .defaultMode)
 
         observers[windowID] = observer
