@@ -5,6 +5,9 @@ import Observation
 @Observable
 @MainActor
 final class WatchlistManager {
+    /// Shared instance set during init — used by AXObserver C callbacks.
+    nonisolated(unsafe) static weak var shared: WatchlistManager?
+
     private(set) var windows: [WatchedWindow] = []
     private(set) var currentIndex: Int = 0
     private(set) var lastToastMessage: String?
@@ -14,6 +17,7 @@ final class WatchlistManager {
 
     init(windowManager: WindowManager) {
         self.windowManager = windowManager
+        WatchlistManager.shared = self
     }
 
     // MARK: - Toggle Mark
@@ -159,9 +163,7 @@ final class WatchlistManager {
             let wid = refcon.load(as: CGWindowID.self)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    // Access the shared instance via NSApp delegate
-                    guard let delegate = NSApplication.shared.delegate as? AppDelegate else { return }
-                    delegate.watchlistManager.removeWindow(byID: wid)
+                    WatchlistManager.shared?.removeWindow(byID: wid)
                 }
             }
         }

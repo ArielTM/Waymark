@@ -2,18 +2,25 @@ import SwiftUI
 import ApplicationServices
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    var watchlistManager: WatchlistManager!
-    var hotkeyManager: HotkeyManager!
+final class AppState: ObservableObject {
+    let watchlistManager: WatchlistManager
+    let hotkeyManager: HotkeyManager
     private var permissionTimer: Timer?
     private var cleanupTimer: Timer?
 
-    func applicationDidFinishLaunching(_ notification: Notification) {
-        if AXIsProcessTrusted() {
-            startServices()
-        } else {
-            showAccessibilityAlert()
-            startPermissionPolling()
+    init() {
+        let windowManager = WindowManager()
+        self.watchlistManager = WatchlistManager(windowManager: windowManager)
+        self.hotkeyManager = HotkeyManager()
+
+        // Defer startup to avoid running modal alerts during SwiftUI init
+        DispatchQueue.main.async { [self] in
+            if AXIsProcessTrusted() {
+                self.startServices()
+            } else {
+                self.showAccessibilityAlert()
+                self.startPermissionPolling()
+            }
         }
     }
 
@@ -42,7 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         hotkeyManager.onShowExpose = { [weak self] in
             MainActor.assumeIsolated {
-                guard let self, let wm = self.watchlistManager else { return }
+                guard let wm = self?.watchlistManager else { return }
                 if ExposePanelController.shared.isVisible {
                     ExposePanelController.shared.dismiss()
                 } else {
@@ -113,37 +120,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 @main
 struct WindowMarkApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-
-    var watchlistManager: WatchlistManager {
-        appDelegate.watchlistManager
-    }
-
-    init() {
-        let windowManager = WindowManager()
-        let watchlist = WatchlistManager(windowManager: windowManager)
-        let hotkeys = HotkeyManager()
-
-        // Inject into the delegate. Since @NSApplicationDelegateAdaptor creates the delegate
-        // before init() completes, we can set properties here.
-        let delegate = NSApplication.shared.delegate as! AppDelegate
-        delegate.watchlistManager = watchlist
-        delegate.hotkeyManager = hotkeys
-    }
+    @StateObject private var appState = AppState()
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView(watchlistManager: watchlistManager)
+            MenuBarView(watchlistManager: appState.watchlistManager)
         } label: {
             HStack(spacing: 2) {
-                Image(systemName: watchlistManager.windows.isEmpty ? "bookmark" : "bookmark.fill")
-                if !watchlistManager.windows.isEmpty {
-                    Text("\(watchlistManager.windows.count)")
+                Image(systemName: appState.watchlistManager.windows.isEmpty ? "bookmark" : "bookmark.fill")
+                if !appState.watchlistManager.windows.isEmpty {
+                    Text("\(appState.watchlistManager.windows.count)")
                 }
             }
         }
         .menuBarExtraStyle(.menu)
-        .onChange(of: watchlistManager.lastToastMessage) { _, newValue in
+        .onChange(of: appState.watchlistManager.lastToastMessage) { _, newValue in
             if let message = newValue {
                 ToastOverlay.shared.show(message: message)
             }
