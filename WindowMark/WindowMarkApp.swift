@@ -15,10 +15,16 @@ final class AppState: ObservableObject {
 
         // Defer startup to avoid running modal alerts during SwiftUI init
         DispatchQueue.main.async { [self] in
-            if AXIsProcessTrusted() {
+            let axTrusted = AXIsProcessTrusted()
+            let inputAccess = CGPreflightListenEventAccess()
+            NSLog("[WindowMark] AXIsProcessTrusted: %d, CGPreflightListenEventAccess: %d", axTrusted ? 1 : 0, inputAccess ? 1 : 0)
+
+            if axTrusted && inputAccess {
                 self.startServices()
+                NSLog("[WindowMark] Services started")
             } else {
-                self.showAccessibilityAlert()
+                NSLog("[WindowMark] Requesting permissions")
+                self.requestPermissions(axTrusted: axTrusted, inputAccess: inputAccess)
                 self.startPermissionPolling()
             }
         }
@@ -66,29 +72,34 @@ final class AppState: ObservableObject {
 
     // MARK: - Permission Flow
 
-    private func showAccessibilityAlert() {
-        let alert = NSAlert()
-        alert.messageText = "Accessibility Permission Required"
-        alert.informativeText = "WindowMark needs Accessibility permission to detect hotkeys and manage windows.\n\nPlease grant access in System Settings > Privacy & Security > Accessibility."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Open System Settings")
-        alert.addButton(withTitle: "Later")
-
-        let response = alert.runModal()
-        if response == .alertFirstButtonReturn {
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
-                NSWorkspace.shared.open(url)
-            }
+    private func requestPermissions(axTrusted: Bool, inputAccess: Bool) {
+        if !axTrusted {
+            // Register app in Accessibility list
+            let promptKey = "AXTrustedCheckOptionPrompt" as CFString
+            let options = [promptKey: true] as CFDictionary
+            AXIsProcessTrustedWithOptions(options)
         }
+
+        if !inputAccess {
+            // This shows the system prompt for Input Monitoring
+            CGRequestListenEventAccess()
+        }
+
+        ToastOverlay.shared.show(message: "Grant Accessibility + Input Monitoring in System Settings")
     }
 
     private func startPermissionPolling() {
         permissionTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                if AXIsProcessTrusted() {
+                let ax = AXIsProcessTrusted()
+                let input = CGPreflightListenEventAccess()
+                NSLog("[WindowMark] Polling — AX: %d, Input: %d", ax ? 1 : 0, input ? 1 : 0)
+                if ax && input {
+                    NSLog("[WindowMark] All permissions granted")
                     self?.permissionTimer?.invalidate()
                     self?.permissionTimer = nil
                     self?.startServices()
+                    NSLog("[WindowMark] Services started")
                 }
             }
         }
