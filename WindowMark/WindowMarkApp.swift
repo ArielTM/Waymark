@@ -5,6 +5,7 @@ import ApplicationServices
 final class AppState: ObservableObject {
     let watchlistManager: WatchlistManager
     let hotkeyManager: HotkeyManager
+    let borderOverlayManager: BorderOverlayManager
     private var permissionTimer: Timer?
     private var cleanupTimer: Timer?
 
@@ -12,6 +13,7 @@ final class AppState: ObservableObject {
         let windowManager = WindowManager()
         self.watchlistManager = WatchlistManager(windowManager: windowManager)
         self.hotkeyManager = HotkeyManager()
+        self.borderOverlayManager = BorderOverlayManager(windowManager: windowManager)
 
         // Defer startup to avoid running modal alerts during SwiftUI init
         DispatchQueue.main.async { [self] in
@@ -35,6 +37,7 @@ final class AppState: ObservableObject {
         hotkeyManager.start()
         startCleanupTimer()
         startAppTerminationObserver()
+        startBorderOverlay()
     }
 
     private func wireHotkeys() {
@@ -111,6 +114,26 @@ final class AppState: ObservableObject {
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.watchlistManager.removeStaleWindows()
+            }
+        }
+    }
+
+    private func startBorderOverlay() {
+        // Wire move/resize notifications
+        watchlistManager.onWindowMoved = { [weak self] windowID in
+            MainActor.assumeIsolated {
+                self?.borderOverlayManager.windowDidMove(windowID)
+            }
+        }
+
+        // Start the fallback position timer
+        borderOverlayManager.startPositionTimer()
+
+        // Observe watchlist changes to sync panels
+        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: true) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.borderOverlayManager.sync(windows: self.watchlistManager.windows)
             }
         }
     }
