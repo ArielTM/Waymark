@@ -126,12 +126,11 @@ struct WindowMarkApp: App {
         MenuBarExtra {
             MenuBarView(watchlistManager: appState.watchlistManager)
         } label: {
-            HStack(spacing: 2) {
-                Image(systemName: appState.watchlistManager.windows.isEmpty ? "bookmark" : "bookmark.fill")
-                if !appState.watchlistManager.windows.isEmpty {
-                    Text("\(appState.watchlistManager.windows.count)")
-                }
-            }
+            let count = appState.watchlistManager.windows.count
+            Label(
+                count > 0 ? "\(count)" : "",
+                systemImage: count > 0 ? "bookmark.fill" : "bookmark"
+            )
         }
         .menuBarExtraStyle(.menu)
         .onChange(of: appState.watchlistManager.lastToastMessage) { _, newValue in
