@@ -133,6 +133,28 @@ final class WindowManager {
         }
     }
 
+    // MARK: - Window Frame
+
+    /// Returns the window frame in AppKit coordinates (origin bottom-left), or nil if the window is not found.
+    func getWindowFrame(_ windowID: CGWindowID) -> NSRect? {
+        guard let info = CGWindowListCopyWindowInfo(.optionIncludingWindow, windowID) as? [[CFString: Any]],
+              let entry = info.first,
+              let boundsDict = entry[kCGWindowBounds] as? [String: CGFloat] else {
+            return nil
+        }
+
+        let cgX = boundsDict["X"] ?? 0
+        let cgY = boundsDict["Y"] ?? 0
+        let cgW = boundsDict["Width"] ?? 0
+        let cgH = boundsDict["Height"] ?? 0
+
+        // Convert CG (top-left origin) to AppKit (bottom-left origin)
+        let primaryScreenHeight = NSScreen.screens.first?.frame.height ?? 0
+        let appKitY = primaryScreenHeight - cgY - cgH
+
+        return NSRect(x: cgX, y: appKitY, width: cgW, height: cgH)
+    }
+
     // MARK: - Private Helpers
 
     private func getTitle(of element: AXUIElement) -> String? {
