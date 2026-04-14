@@ -53,11 +53,11 @@ Screen Recording permission is needed to show live window thumbnails in the Expo
 
 | Hotkey | Action |
 |--------|--------|
-| `Ctrl + Alt + M` | Toggle mark on the focused window |
-| `Ctrl + Alt + N` | Cycle forward through marked windows |
-| `Ctrl + Alt + Shift + N` | Cycle backward through marked windows |
-| `Ctrl + Alt + L` | Show Expose panel with window thumbnails |
-| `Ctrl + Alt + C` | Clear all marked windows |
+| `⌃⌥M` (Control + Option + M) | Toggle mark on the focused window |
+| `⌃⌥N` (Control + Option + N) | Cycle forward through marked windows |
+| `⌃⌥⇧N` (Control + Option + Shift + N) | Cycle backward through marked windows |
+| `⌃⌥L` (Control + Option + L) | Show Expose panel with window thumbnails |
+| `⌃⌥C` (Control + Option + C) | Clear all marked windows |
 
 ## Menu Bar
 
@@ -67,7 +67,7 @@ Screen Recording permission is needed to show live window thumbnails in the Expo
 
 ## Expose Panel
 
-Press `Ctrl + Alt + L` to show a full-screen overlay with thumbnails of all marked windows.
+Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked windows.
 
 - **Arrow keys** to navigate the grid
 - **Enter** to focus the selected window
@@ -80,7 +80,7 @@ Press `Ctrl + Alt + L` to show a full-screen overlay with thumbnails of all mark
 Edit `WindowMark/Config/HotkeyConfig.swift` and rebuild. Each hotkey is defined as a key code + modifier combination:
 
 ```swift
-// Example: Change toggle mark to Ctrl + Alt + B
+// Example: Change toggle mark to Control + Option + B
 static let toggleMark = (key: CGKeyCode(0x0B), mods: CGEventFlags.maskControl.union(.maskAlternate))
 ```
 
