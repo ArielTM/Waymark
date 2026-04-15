@@ -1,4 +1,4 @@
-# WindowMark
+# Waymark
 
 A macOS menu bar app for **marking windows you need to come back to** and cycling through them with global hotkeys.
 
@@ -8,7 +8,7 @@ Your brain holds 3–5 things in working memory. When you're juggling 15+ window
 
 ## The Solution
 
-WindowMark lets you mark the windows you care about and ignore everything else. One hotkey to mark, one hotkey to cycle through your marks. It's a bookmark for your attention — you mark a window when you think "I need to come back to this", and the mark ensures you won't forget.
+Waymark lets you mark the windows you care about and ignore everything else. One hotkey to mark, one hotkey to cycle through your marks. It's a bookmark for your attention — you mark a window when you think "I need to come back to this", and the mark ensures you won't forget.
 
 - Mark a window in one keystroke — no typing, no clicking, no context switch
 - Cycle through only your marked windows, skipping the noise
@@ -21,28 +21,28 @@ WindowMark lets you mark the windows you care about and ignore everything else. 
 
 ### Download
 
-1. Download the latest `.dmg` from [GitHub Releases](https://github.com/AtrRandom/WindowMark/releases)
-2. Open the DMG and drag **WindowMark** to **Applications**
-3. Launch WindowMark from Applications
+1. Download the latest `.dmg` from [GitHub Releases](https://github.com/AtrRandom/Waymark/releases)
+2. Open the DMG and drag **Waymark** to **Applications**
+3. Launch Waymark from Applications
 
-> **Note:** WindowMark is not notarized yet. On first launch, macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog. You only need to do this once.
+> **Note:** Waymark is not notarized yet. On first launch, macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog. You only need to do this once.
 
 ### Homebrew
 
 ```bash
-brew install --cask atrandom/tap/windowmark
+brew install --cask atrandom/tap/waymark
 ```
 
 ## Permissions
 
 ### Accessibility (Required)
 
-WindowMark needs Accessibility permission to detect global hotkeys and manage windows. On first launch, you'll be prompted to grant access.
+Waymark needs Accessibility permission to detect global hotkeys and manage windows. On first launch, you'll be prompted to grant access.
 
 **To grant manually:**
 1. Open **System Settings > Privacy & Security > Accessibility**
 2. Click the **+** button
-3. Navigate to and add `WindowMark.app`
+3. Navigate to and add `Waymark.app`
 4. Enable the toggle
 
 ### Screen Recording (Optional)
@@ -52,7 +52,7 @@ Screen Recording permission is needed to show live window thumbnails in the Expo
 **To grant:**
 1. Open **System Settings > Privacy & Security > Screen Recording**
 2. Click the **+** button
-3. Add `WindowMark.app`
+3. Add `Waymark.app`
 4. Enable the toggle
 
 > **Note:** On macOS 15 (Sequoia), you may need to re-authorize these permissions periodically.
@@ -72,8 +72,8 @@ Screen Recording permission is needed to show live window thumbnails in the Expo
 - **Empty watchlist:** Outline bookmark icon
 - **Non-empty watchlist:** Filled bookmark icon + count
 - Click the icon to see the list of marked windows, focus any window, or clear all
-- **Launch at Login** toggle to start WindowMark automatically
-- **About WindowMark** to see version info and links
+- **Launch at Login** toggle to start Waymark automatically
+- **About Waymark** to see version info and links
 
 ## Expose Panel
 
@@ -87,7 +87,7 @@ Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked wind
 
 ## Changing Hotkeys
 
-Edit `WindowMark/Config/HotkeyConfig.swift` and rebuild. Each hotkey is defined as a key code + modifier combination:
+Edit `Waymark/Config/HotkeyConfig.swift` and rebuild. Each hotkey is defined as a key code + modifier combination:
 
 ```swift
 // Example: Change toggle mark to Control + Option + B
@@ -113,13 +113,13 @@ Key codes are macOS virtual key codes. Common ones:
 xcodegen generate
 
 # Build
-xcodebuild -scheme WindowMark -configuration Debug build
+xcodebuild -scheme Waymark -configuration Debug build
 
 # Find and launch the built app
-open ~/Library/Developer/Xcode/DerivedData/WindowMark-*/Build/Products/Debug/WindowMark.app
+open ~/Library/Developer/Xcode/DerivedData/Waymark-*/Build/Products/Debug/Waymark.app
 ```
 
-Or open `WindowMark.xcodeproj` in Xcode and hit Run.
+Or open `Waymark.xcodeproj` in Xcode and hit Run.
 
 ## How It Works
 
@@ -131,11 +131,11 @@ Or open `WindowMark.xcodeproj` in Xcode and hit Run.
 
 ## Uninstall
 
-1. Quit WindowMark (click the menu bar icon > Quit)
-2. Delete `WindowMark.app` from Applications
-3. Optionally remove preferences: `defaults delete io.atrandom.WindowMark`
+1. Quit Waymark (click the menu bar icon > Quit)
+2. Delete `Waymark.app` from Applications
+3. Optionally remove preferences: `defaults delete io.atrandom.Waymark`
 
-If installed via Homebrew: `brew uninstall windowmark`
+If installed via Homebrew: `brew uninstall waymark`
 
 ## Known Limitations
 
