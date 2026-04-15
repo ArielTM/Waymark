@@ -166,10 +166,11 @@ struct WindowMarkApp: App {
             MenuBarView(watchlistManager: appState.watchlistManager)
         } label: {
             let count = appState.watchlistManager.targets.count
-            Label(
-                count > 0 ? "\(count)" : "",
-                systemImage: count > 0 ? "bookmark.fill" : "bookmark"
-            )
+            Label {
+                Text(count > 0 ? "\(count)" : "")
+            } icon: {
+                Image(nsImage: CairnIcon.menuBarImage(filled: count > 0))
+            }
         }
         .menuBarExtraStyle(.menu)
         .onChange(of: appState.watchlistManager.lastToastMessage) { _, newValue in
