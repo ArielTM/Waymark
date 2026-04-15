@@ -96,6 +96,10 @@ struct MenuBarView: View {
 
         Divider()
 
+        Button("About WindowMark") {
+            AboutPanelController.shared.show()
+        }
+
         Button("Quit WindowMark") {
             NSApplication.shared.terminate(nil)
         }
