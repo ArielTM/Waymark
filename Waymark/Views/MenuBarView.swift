@@ -3,8 +3,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     let watchlistManager: WatchlistManager
-    @State private var selectedPosition = PalettePosition.stored
-    @State private var hideOnFullScreen = PaletteSettings.hideOnFullScreen
+    @Bindable var settings: Settings
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
@@ -43,12 +42,11 @@ struct MenuBarView: View {
         Menu("Palette Position") {
             ForEach(PalettePosition.allCases, id: \.rawValue) { position in
                 Button {
-                    selectedPosition = position
-                    PalettePosition.stored = position
+                    settings.palettePosition = position
                 } label: {
                     HStack {
                         Text(position.displayName)
-                        if position == selectedPosition {
+                        if position == settings.palettePosition {
                             Spacer()
                             Image(systemName: "checkmark")
                         }
@@ -57,13 +55,7 @@ struct MenuBarView: View {
             }
         }
 
-        Toggle("Hide on Full Screen", isOn: Binding(
-            get: { hideOnFullScreen },
-            set: { newValue in
-                hideOnFullScreen = newValue
-                PaletteSettings.hideOnFullScreen = newValue
-            }
-        ))
+        Toggle("Hide on Full Screen", isOn: $settings.hideOnFullScreen)
 
         Toggle("Launch at Login", isOn: Binding(
             get: { launchAtLogin },
