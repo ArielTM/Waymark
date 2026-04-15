@@ -1,0 +1,88 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build
+        run: |
+          xcodebuild \
+            -scheme WindowMark \
+            -configuration Release \
+            -archivePath build/WindowMark.xcarchive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGN_STYLE=Manual \
+            archive
+
+      - name: Export app from archive
+        run: |
+          mkdir -p build/export
+          cp -R build/WindowMark.xcarchive/Products/Applications/WindowMark.app build/export/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WindowMark.app
+          path: build/export/WindowMark.app
+
+      # --- Release steps (only on tag push) ---
+
+      - name: Get version from tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+
+      - name: Create DMG
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: ./scripts/create-dmg.sh build/export/WindowMark.app "${{ steps.version.outputs.version }}"
+
+      - name: Compute SHA256
+        if: startsWith(github.ref, 'refs/tags/v')
+        id: sha
+        run: |
+          SHA=$(shasum -a 256 "build/WindowMark-${{ steps.version.outputs.version }}-universal.dmg" | awk '{print $1}')
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "**SHA256:** \`$SHA\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/WindowMark-${{ steps.version.outputs.version }}-universal.dmg
+          body: |
+            ## WindowMark ${{ steps.version.outputs.version }}
+
+            ### Install
+            1. Download the DMG below
+            2. Open the DMG and drag WindowMark to Applications
+            3. On first launch, right-click the app and select "Open" (required because the app is not notarized yet)
+            4. Grant Accessibility and Input Monitoring permissions when prompted
+
+            ### SHA256
+            ```
+            ${{ steps.sha.outputs.sha256 }}
+            ```
+
+      # --- Notarization (uncomment when Apple Developer account is available) ---
+      # - name: Notarize
+      #   if: startsWith(github.ref, 'refs/tags/v')
+      #   run: |
+      #     xcrun notarytool submit "build/WindowMark-${{ steps.version.outputs.version }}-universal.dmg" \
+      #       --apple-id "${{ secrets.APPLE_ID }}" \
+      #       --team-id "${{ secrets.TEAM_ID }}" \
+      #       --password "${{ secrets.APP_SPECIFIC_PASSWORD }}" \
+      #       --wait
+      #     xcrun stapler staple build/export/WindowMark.app
