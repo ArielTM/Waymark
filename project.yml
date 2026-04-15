@@ -23,6 +23,9 @@ targets:
         INFOPLIST_FILE: WindowMark/Info.plist
         CODE_SIGN_ENTITLEMENTS: WindowMark/WindowMark.entitlements
         COMBINE_HIDPI_IMAGES: true
+      debug:
+        ENABLE_HARDENED_RUNTIME: false
+      release:
         ENABLE_HARDENED_RUNTIME: true
     entitlements:
       path: WindowMark/WindowMark.entitlements
