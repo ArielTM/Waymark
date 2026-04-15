@@ -47,6 +47,7 @@ final class ToastOverlay {
     static let shared = ToastOverlay()
 
     private let panel = ToastPanel()
+    private var hostingView: NSHostingView<ToastView>?
     private var dismissTimer: Timer?
 
     private init() {}
@@ -55,10 +56,20 @@ final class ToastOverlay {
         // Cancel any existing dismiss timer
         dismissTimer?.invalidate()
 
-        // Set content
-        let hostingView = NSHostingView(rootView: ToastView(message: message))
+        // Reuse the hosting view — recreating it each call races with AppKit's
+        // display cycle and crashes in _postWindowNeedsUpdateConstraints.
+        let toastView = ToastView(message: message)
+        if let hostingView {
+            hostingView.rootView = toastView
+        } else {
+            let hv = NSHostingView(rootView: toastView)
+            hv.sizingOptions = .intrinsicContentSize
+            panel.contentView = hv
+            hostingView = hv
+        }
+
+        guard let hostingView else { return }
         hostingView.frame.size = hostingView.fittingSize
-        panel.contentView = hostingView
         panel.setContentSize(hostingView.fittingSize)
 
         // Position at top-center of main screen

@@ -78,10 +78,10 @@ final class PalettePanelController {
 
     func update(watchlistManager: WatchlistManager) {
         let position = PalettePosition.stored
-        let windows = watchlistManager.windows
+        let targets = watchlistManager.targets
 
-        // Hide if position is "none" or no windows
-        if position == .none || windows.isEmpty {
+        // Hide if position is "none" or no targets
+        if position == .none || targets.isEmpty {
             panel?.orderOut(nil)
             return
         }
@@ -100,19 +100,22 @@ final class PalettePanelController {
         }
 
         let paletteView = PaletteView(
-            windows: windows,
+            targets: targets,
             currentIndex: watchlistManager.currentIndex,
             onSelect: { [weak watchlistManager] index in
-                watchlistManager?.focusWindow(at: index)
+                watchlistManager?.focusTarget(at: index)
             }
         )
 
-        // Reuse existing hosting view — replacing it each tick races with AppKit's
-        // constraint update cycle and crashes in _postWindowNeedsUpdateConstraints.
+        // Reuse the hosting view — recreating it each tick races with AppKit's
+        // display cycle and crashes in _postWindowNeedsUpdateConstraints.
         if let hostingView {
             hostingView.rootView = paletteView
         } else {
             let hv = NSHostingView(rootView: paletteView)
+            // Prevent NSHostingView from negotiating min/max content size with
+            // the borderless panel — that path crashes during constraint updates.
+            hv.sizingOptions = .intrinsicContentSize
             if let effectView = panel?.contentView as? NSVisualEffectView {
                 hv.frame = NSRect(origin: .zero, size: hv.fittingSize)
                 effectView.addSubview(hv)

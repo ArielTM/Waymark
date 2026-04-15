@@ -7,12 +7,13 @@ final class AppState: ObservableObject {
     let hotkeyManager: HotkeyManager
     let gestureManager = GestureManager()
     let paletteController = PalettePanelController()
+    let chromeTabService = ChromeTabService()
     private var permissionTimer: Timer?
     private var cleanupTimer: Timer?
 
     init() {
         let windowManager = WindowManager()
-        self.watchlistManager = WatchlistManager(windowManager: windowManager)
+        self.watchlistManager = WatchlistManager(windowManager: windowManager, chromeTabService: chromeTabService)
         self.hotkeyManager = HotkeyManager()
 
         // Defer startup to avoid running modal alerts during SwiftUI init
@@ -115,7 +116,7 @@ final class AppState: ObservableObject {
     private func startCleanupTimer() {
         cleanupTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
-                self?.watchlistManager.removeStaleWindows()
+                self?.watchlistManager.removeStaleTargets()
             }
         }
     }
@@ -150,7 +151,7 @@ final class AppState: ObservableObject {
         ) { [weak self] notification in
             guard let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication else { return }
             MainActor.assumeIsolated {
-                self?.watchlistManager.removeWindows(forPID: app.processIdentifier)
+                self?.watchlistManager.removeTargets(forPID: app.processIdentifier)
             }
         }
     }
@@ -164,7 +165,7 @@ struct WindowMarkApp: App {
         MenuBarExtra {
             MenuBarView(watchlistManager: appState.watchlistManager)
         } label: {
-            let count = appState.watchlistManager.windows.count
+            let count = appState.watchlistManager.targets.count
             Label(
                 count > 0 ? "\(count)" : "",
                 systemImage: count > 0 ? "bookmark.fill" : "bookmark"

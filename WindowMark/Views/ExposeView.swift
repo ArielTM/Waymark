@@ -18,7 +18,7 @@ struct ExposeView: View {
     }
 
     private var columns: Int {
-        switch watchlistManager.windows.count {
+        switch watchlistManager.targets.count {
         case 1: return 1
         case 2...3: return 2
         default: return 3
@@ -40,15 +40,15 @@ struct ExposeView: View {
                 Spacer()
 
                 LazyVGrid(columns: gridColumns, spacing: 20) {
-                    ForEach(Array(watchlistManager.windows.enumerated()), id: \.element.id) { index, window in
+                    ForEach(Array(watchlistManager.targets.enumerated()), id: \.element.id) { index, target in
                         WindowThumbnailCell(
-                            window: window,
+                            target: target,
                             index: index,
                             isSelected: index == selectedIndex,
-                            thumbnail: thumbnails[window.id]
+                            thumbnail: thumbnails[target.windowID]
                         )
                         .onTapGesture {
-                            watchlistManager.focusWindow(at: index)
+                            watchlistManager.focusTarget(at: index)
                             dismiss()
                         }
                     }
@@ -70,7 +70,7 @@ struct ExposeView: View {
             return .handled
         }
         .onKeyPress(.return) {
-            watchlistManager.focusWindow(at: selectedIndex)
+            watchlistManager.focusTarget(at: selectedIndex)
             dismiss()
             return .handled
         }
@@ -93,8 +93,8 @@ struct ExposeView: View {
         .onKeyPress(characters: CharacterSet(charactersIn: "123456789")) { press in
             if let char = press.characters.first,
                let num = Int(String(char)),
-               num >= 1, num <= watchlistManager.windows.count {
-                watchlistManager.focusWindow(at: num - 1)
+               num >= 1, num <= watchlistManager.targets.count {
+                watchlistManager.focusTarget(at: num - 1)
                 dismiss()
                 return .handled
             }
@@ -106,7 +106,7 @@ struct ExposeView: View {
     }
 
     private func moveSelection(by offset: Int) {
-        let count = watchlistManager.windows.count
+        let count = watchlistManager.targets.count
         guard count > 0 else { return }
         let newIndex = selectedIndex + offset
         if newIndex >= 0 && newIndex < count {
@@ -116,20 +116,20 @@ struct ExposeView: View {
 
     private func loadThumbnails() async {
         var successCount = 0
-        for window in watchlistManager.windows {
+        for target in watchlistManager.targets {
             let image = await watchlistManager.windowManager.captureThumbnail(
-                for: window,
+                for: target.parentWindow,
                 size: CGSize(width: 280, height: 175)
             )
             if let image {
-                thumbnails[window.id] = image
+                thumbnails[target.windowID] = image
                 successCount += 1
             }
         }
         loadingThumbnails = false
 
         // If no thumbnails loaded, Screen Recording permission is likely missing
-        if successCount == 0 && !watchlistManager.windows.isEmpty {
+        if successCount == 0 && !watchlistManager.targets.isEmpty {
             onThumbnailsFailed?()
         }
     }
@@ -138,10 +138,17 @@ struct ExposeView: View {
 // MARK: - Thumbnail Cell
 
 struct WindowThumbnailCell: View {
-    let window: WatchedWindow
+    let target: WatchTarget
     let index: Int
     let isSelected: Bool
     let thumbnail: NSImage?
+
+    private var subtitle: String {
+        switch target {
+        case .window(let w): return w.title
+        case .chromeTab(_, let tab): return tab.titleAtMark
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -160,7 +167,7 @@ struct WindowThumbnailCell: View {
                         .frame(width: 280, height: 175)
                         .overlay {
                             VStack(spacing: 8) {
-                                if let icon = window.appIcon {
+                                if let icon = target.appIcon {
                                     Image(nsImage: icon)
                                         .resizable()
                                         .frame(width: 48, height: 48)
@@ -191,18 +198,18 @@ struct WindowThumbnailCell: View {
 
             // App info bar
             HStack(spacing: 8) {
-                if let icon = window.appIcon {
+                if let icon = target.appIcon {
                     Image(nsImage: icon)
                         .resizable()
                         .frame(width: 20, height: 20)
                 }
 
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(window.appName)
+                    Text(target.parentWindow.appName)
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.white)
                         .lineLimit(1)
-                    Text(window.title)
+                    Text(subtitle)
                         .font(.system(size: 10))
                         .foregroundStyle(.white.opacity(0.5))
                         .lineLimit(1)

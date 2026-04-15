@@ -20,5 +20,7 @@
     <string>$(MACOSX_DEPLOYMENT_TARGET)</string>
     <key>LSUIElement</key>
     <true/>
+    <key>NSAppleEventsUsageDescription</key>
+    <string>WindowMark uses Automation to detect and switch Chrome tabs.</string>
 </dict>
 </plist>

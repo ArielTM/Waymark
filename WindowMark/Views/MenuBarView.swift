@@ -5,24 +5,24 @@ struct MenuBarView: View {
     @State private var selectedPosition = PalettePosition.stored
 
     var body: some View {
-        if watchlistManager.windows.isEmpty {
+        if watchlistManager.targets.isEmpty {
             Text("No watched windows")
                 .foregroundStyle(.secondary)
         } else {
-            Text("\(watchlistManager.windows.count) watched window\(watchlistManager.windows.count == 1 ? "" : "s")")
+            Text("\(watchlistManager.targets.count) watched item\(watchlistManager.targets.count == 1 ? "" : "s")")
                 .foregroundStyle(.secondary)
 
             Divider()
 
-            ForEach(Array(watchlistManager.windows.enumerated()), id: \.element.id) { index, window in
+            ForEach(Array(watchlistManager.targets.enumerated()), id: \.element.id) { index, target in
                 Button {
-                    watchlistManager.focusWindow(at: index)
+                    watchlistManager.focusTarget(at: index)
                 } label: {
                     HStack {
-                        if let icon = window.appIcon {
+                        if let icon = target.appIcon {
                             Image(nsImage: icon)
                         }
-                        Text(window.displayTitle)
+                        Text(target.displayTitle)
                             .lineLimit(1)
                         if index == watchlistManager.currentIndex {
                             Spacer()
@@ -54,7 +54,7 @@ struct MenuBarView: View {
             }
         }
 
-        if !watchlistManager.windows.isEmpty {
+        if !watchlistManager.targets.isEmpty {
             Button("Clear All", role: .destructive) {
                 watchlistManager.clearAll()
             }

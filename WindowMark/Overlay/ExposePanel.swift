@@ -36,7 +36,7 @@ final class ExposePanelController {
     }
 
     func show(watchlistManager: WatchlistManager) {
-        guard !watchlistManager.windows.isEmpty else { return }
+        guard !watchlistManager.targets.isEmpty else { return }
 
         dismiss()
 
@@ -52,6 +52,7 @@ final class ExposePanelController {
         )
 
         let hostingView = NSHostingView(rootView: exposeView)
+        hostingView.sizingOptions = .intrinsicContentSize
         hostingView.frame = screen.frame
         exposePanel.contentView = hostingView
 

@@ -1,29 +1,29 @@
 import SwiftUI
 
 struct PaletteView: View {
-    let windows: [WatchedWindow]
+    let targets: [WatchTarget]
     let currentIndex: Int
     let onSelect: (Int) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if windows.isEmpty {
+            if targets.isEmpty {
                 Text("No marked windows")
                     .foregroundStyle(.secondary)
                     .font(.caption)
                     .padding(8)
             } else {
-                ForEach(Array(windows.enumerated()), id: \.element.id) { index, window in
+                ForEach(Array(targets.enumerated()), id: \.element.id) { index, target in
                     Button {
                         onSelect(index)
                     } label: {
                         HStack(spacing: 8) {
-                            if let icon = window.appIcon {
+                            if let icon = target.appIcon {
                                 Image(nsImage: icon)
                                     .resizable()
                                     .frame(width: 16, height: 16)
                             }
-                            Text(window.displayTitle)
+                            Text(target.displayTitle)
                                 .lineLimit(1)
                                 .truncationMode(.tail)
                                 .font(.system(size: 12))

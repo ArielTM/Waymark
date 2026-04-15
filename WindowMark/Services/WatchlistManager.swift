@@ -8,15 +8,17 @@ final class WatchlistManager {
     /// Shared instance set during init — used by AXObserver C callbacks.
     nonisolated(unsafe) static weak var shared: WatchlistManager?
 
-    private(set) var windows: [WatchedWindow] = []
+    private(set) var targets: [WatchTarget] = []
     private(set) var currentIndex: Int = 0
     private(set) var lastToastMessage: String?
 
     let windowManager: WindowManager
+    let chromeTabService: ChromeTabService
     private var observers: [CGWindowID: AXObserver] = [:]
 
-    init(windowManager: WindowManager) {
+    init(windowManager: WindowManager, chromeTabService: ChromeTabService) {
         self.windowManager = windowManager
+        self.chromeTabService = chromeTabService
         WatchlistManager.shared = self
     }
 
@@ -28,127 +30,202 @@ final class WatchlistManager {
             return
         }
 
-        if let existingIndex = windows.firstIndex(where: { $0.id == focused.id }) {
-            removeObserver(for: focused.id)
-            windows.remove(at: existingIndex)
-            if windows.isEmpty {
+        // Build the target: Chrome tab or plain window
+        let target: WatchTarget
+        if ChromeTabService.isChrome(focused.bundleIdentifier),
+           let tabInfo = chromeTabService.getActiveTab() {
+            target = .chromeTab(focused, tabInfo)
+        } else {
+            target = .window(focused)
+        }
+
+        // Check for existing entry to toggle off
+        if let existingIndex = targets.firstIndex(where: { $0.id == target.id }) {
+            let removed = targets[existingIndex]
+            removeObserver(for: removed)
+            targets.remove(at: existingIndex)
+            if targets.isEmpty {
                 currentIndex = 0
             } else if existingIndex <= currentIndex {
                 currentIndex = max(0, currentIndex - 1)
             }
-            lastToastMessage = "− Unmarked: \(focused.displayTitle) [\(windows.count) watched]"
+            lastToastMessage = "− Unmarked: \(removed.displayTitle) [\(targets.count) watched]"
         } else {
-            windows.append(focused)
-            addObserver(for: focused)
-            lastToastMessage = "+ Marked: \(focused.displayTitle) [\(windows.count) watched]"
+            // For chrome tabs, dedup by URL (same tab might be in a different window)
+            if case .chromeTab(_, let tab) = target,
+               targets.contains(where: {
+                   if case .chromeTab(_, let existing) = $0 { return existing.url == tab.url }
+                   return false
+               }) {
+                lastToastMessage = "Tab already marked"
+                return
+            }
+            targets.append(target)
+            addObserver(for: target)
+            lastToastMessage = "+ Marked: \(target.displayTitle) [\(targets.count) watched]"
         }
     }
 
     // MARK: - Cycle Forward
 
     func cycleNext() {
-        guard !windows.isEmpty else {
+        guard !targets.isEmpty else {
             lastToastMessage = "No watched windows — press ⌃⌥M to mark"
             return
         }
 
-        currentIndex = (currentIndex + 1) % windows.count
+        currentIndex = (currentIndex + 1) % targets.count
         focusCurrentAndToast()
     }
 
     // MARK: - Cycle Backward
 
     func cyclePrev() {
-        guard !windows.isEmpty else {
+        guard !targets.isEmpty else {
             lastToastMessage = "No watched windows — press ⌃⌥M to mark"
             return
         }
 
-        currentIndex = (currentIndex - 1 + windows.count) % windows.count
+        currentIndex = (currentIndex - 1 + targets.count) % targets.count
         focusCurrentAndToast()
     }
 
-    // MARK: - Focus Window at Index
+    // MARK: - Focus Target at Index
 
-    func focusWindow(at index: Int) {
-        guard index >= 0, index < windows.count else { return }
+    func focusTarget(at index: Int) {
+        guard index >= 0, index < targets.count else { return }
         currentIndex = index
-        windowManager.focusWindow(windows[index])
+        let target = targets[index]
+        windowManager.focusWindow(target.parentWindow)
+        if case .chromeTab(_, let tab) = target {
+            _ = chromeTabService.activateTab(url: tab.url)
+        }
     }
 
     // MARK: - Clear All
 
     func clearAll() {
         removeAllObservers()
-        windows.removeAll()
+        targets.removeAll()
         currentIndex = 0
         lastToastMessage = "Watchlist cleared"
     }
 
-    // MARK: - Stale Window Cleanup
+    // MARK: - Stale Target Cleanup
 
-    func removeStaleWindows() {
+    func removeStaleTargets() {
         let liveIDs = windowManager.getAllWindowIDs()
-        let before = windows.count
-        windows.removeAll { !liveIDs.contains($0.id) }
+        let before = targets.count
 
-        if windows.isEmpty {
-            currentIndex = 0
-        } else if currentIndex >= windows.count {
-            currentIndex = windows.count - 1
+        // Only query Chrome if there are chrome tab targets
+        let hasChromeTargets = targets.contains {
+            if case .chromeTab = $0 { return true }
+            return false
+        }
+        let liveTabURLs: Set<String> = hasChromeTargets ? chromeTabService.allTabURLs() : []
+
+        // Collect window IDs that are about to lose all their targets
+        let windowIDsBefore = Set(targets.map(\.windowID))
+
+        targets.removeAll { target in
+            switch target {
+            case .window(let w):
+                return !liveIDs.contains(w.id)
+            case .chromeTab(let w, let tab):
+                return !liveIDs.contains(w.id) || !liveTabURLs.contains(tab.url)
+            }
         }
 
-        let removed = before - windows.count
+        // Clean up observers for windows that no longer have any targets
+        let windowIDsAfter = Set(targets.map(\.windowID))
+        for wid in windowIDsBefore.subtracting(windowIDsAfter) {
+            observers.removeValue(forKey: wid)
+        }
+
+        if targets.isEmpty {
+            currentIndex = 0
+        } else if currentIndex >= targets.count {
+            currentIndex = targets.count - 1
+        }
+
+        let removed = before - targets.count
         if removed > 0 {
-            print("[WindowMark] Removed \(removed) stale window(s). \(windows.count) remaining.")
+            print("[WindowMark] Removed \(removed) stale target(s). \(targets.count) remaining.")
         }
     }
 
-    /// Remove all watched windows belonging to a terminated application.
-    func removeWindows(forPID pid: pid_t) {
-        let before = windows.count
-        windows.removeAll { $0.pid == pid }
+    /// Remove all targets belonging to a terminated application.
+    func removeTargets(forPID pid: pid_t) {
+        let windowIDs = Set(targets.filter { $0.pid == pid }.map(\.windowID))
+        let before = targets.count
+        targets.removeAll { $0.pid == pid }
 
-        if windows.isEmpty {
-            currentIndex = 0
-        } else if currentIndex >= windows.count {
-            currentIndex = windows.count - 1
+        // Clean up observers for removed windows
+        for wid in windowIDs {
+            observers.removeValue(forKey: wid)
         }
 
-        let removed = before - windows.count
+        if targets.isEmpty {
+            currentIndex = 0
+        } else if currentIndex >= targets.count {
+            currentIndex = targets.count - 1
+        }
+
+        let removed = before - targets.count
         if removed > 0 {
-            print("[WindowMark] App terminated (PID \(pid)). Removed \(removed) window(s).")
+            print("[WindowMark] App terminated (PID \(pid)). Removed \(removed) target(s).")
         }
     }
 
-    /// Remove a specific window by ID (used by AXObserver callbacks).
-    func removeWindow(byID windowID: CGWindowID) {
-        guard let index = windows.firstIndex(where: { $0.id == windowID }) else { return }
-        windows.remove(at: index)
+    /// Remove all targets for a specific window ID (used by AXObserver callbacks).
+    func removeTarget(byWindowID windowID: CGWindowID) {
+        let indicesToRemove = targets.enumerated().filter { $0.element.windowID == windowID }.map(\.offset)
+        guard !indicesToRemove.isEmpty else { return }
 
-        if windows.isEmpty {
-            currentIndex = 0
-        } else if index <= currentIndex && currentIndex > 0 {
-            currentIndex -= 1
-        } else if currentIndex >= windows.count {
-            currentIndex = windows.count - 1
+        for index in indicesToRemove.reversed() {
+            targets.remove(at: index)
         }
 
-        print("[WindowMark] Window \(windowID) destroyed. \(windows.count) remaining.")
+        observers.removeValue(forKey: windowID)
+
+        if targets.isEmpty {
+            currentIndex = 0
+        } else if currentIndex >= targets.count {
+            currentIndex = targets.count - 1
+        }
+
+        print("[WindowMark] Window \(windowID) destroyed. \(targets.count) remaining.")
     }
 
     // MARK: - Private
 
     private func focusCurrentAndToast() {
-        windowManager.updateTitle(of: &windows[currentIndex])
-        windowManager.focusWindow(windows[currentIndex])
-        lastToastMessage = "[\(currentIndex + 1)/\(windows.count)] \(windows[currentIndex].displayTitle)"
+        guard currentIndex >= 0, currentIndex < targets.count else { return }
+        var target = targets[currentIndex]
+
+        // Update title for window targets
+        if case .window(var w) = target {
+            windowManager.updateTitle(of: &w)
+            target = .window(w)
+            targets[currentIndex] = target
+        }
+
+        windowManager.focusWindow(target.parentWindow)
+        if case .chromeTab(_, let tab) = target {
+            _ = chromeTabService.activateTab(url: tab.url)
+        }
+
+        lastToastMessage = "[\(currentIndex + 1)/\(targets.count)] \(targets[currentIndex].displayTitle)"
     }
 
     // MARK: - AXObserver Management
 
-    private func addObserver(for window: WatchedWindow) {
+    private func addObserver(for target: WatchTarget) {
+        let window = target.parentWindow
         guard let axElement = window.axElement else { return }
+
+        // Skip if we already observe this window (multiple tabs share one window)
+        guard observers[window.id] == nil else { return }
 
         var observer: AXObserver?
         let pid = window.pid
@@ -165,7 +242,7 @@ final class WatchlistManager {
             let wid = refcon.load(as: CGWindowID.self)
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    WatchlistManager.shared?.removeWindow(byID: wid)
+                    WatchlistManager.shared?.removeTarget(byWindowID: wid)
                 }
             }
         }
@@ -182,9 +259,13 @@ final class WatchlistManager {
         observers[windowID] = observer
     }
 
-    private func removeObserver(for windowID: CGWindowID) {
-        observers.removeValue(forKey: windowID)
-        // AXObserver is automatically cleaned up when deinitialized
+    private func removeObserver(for target: WatchTarget) {
+        let windowID = target.windowID
+        // Only remove observer if no other targets share this window
+        let othersWithSameWindow = targets.filter { $0.windowID == windowID && $0.id != target.id }
+        if othersWithSameWindow.isEmpty {
+            observers.removeValue(forKey: windowID)
+        }
     }
 
     private func removeAllObservers() {
