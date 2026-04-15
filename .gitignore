@@ -10,5 +10,8 @@ WindowMark.xcodeproj/
 # Brainstorming visual companion
 ***REMOVED***
 
+# Worktrees
+.worktrees/
+
 # macOS
 .DS_Store
