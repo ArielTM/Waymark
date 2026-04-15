@@ -1,122 +1,141 @@
-# Waymark
+<p align="center">
+  <img src="docs/assets/icon.png" width="128" alt="Waymark app icon — a cairn of stacked stones">
+</p>
 
-A macOS menu bar app for **marking windows you need to come back to** and cycling through them with global hotkeys.
+<h1 align="center">Waymark</h1>
 
-## The Problem
+<p align="center">
+  Mark the windows that matter. Forget the rest.
+</p>
 
-Your brain holds 3–5 things in working memory. When you're juggling 15+ windows — Chrome profiles, VS Code instances, terminals, LLM sessions — you forget what you need to check back on. Every existing tool either cycles through *all* windows (Cmd+Tab, AltTab) or arranges them on screen (Rectangle, Stage Manager). None of them answer the question: **"which windows actually matter to me right now?"**
+<p align="center">
+  <img src="https://img.shields.io/badge/macOS-14%2B-black?logo=apple" alt="macOS 14+">
+  <img src="https://img.shields.io/badge/Swift-6-F05138?logo=swift&logoColor=white" alt="Swift 6">
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="MIT License">
+  <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="Zero Dependencies">
+</p>
 
-## The Solution
+<!-- TODO: Add hero GIF/screenshot showing the mark → cycle → exposé flow.
+     See [redacted] Appendix: Screenshot Capture Guide -->
 
-Waymark lets you mark the windows you care about and ignore everything else. One hotkey to mark, one hotkey to cycle through your marks. It's a bookmark for your attention — you mark a window when you think "I need to come back to this", and the mark ensures you won't forget.
+---
 
-- Mark a window in one keystroke — no typing, no clicking, no context switch
-- Cycle through only your marked windows, skipping the noise
-- Works across all apps: browsers, editors, terminals, anything with a window
-- Tracks individual Chrome tabs, not just whole windows
-- Expose panel shows thumbnails of all your marks at a glance
-- Floating palette keeps your marks visible without taking focus
+Your brain holds 3–5 things in working memory. When you're juggling 15+ windows — Chrome profiles, VS Code instances, terminals, LLM sessions — you forget what you need to check back on. Every existing tool either cycles through *all* windows (⌘Tab, AltTab) or arranges them on screen (Rectangle, Stage Manager). None of them answer the question: **"which windows actually matter to me right now?"**
+
+Waymark lets you mark the windows you care about and ignore everything else. One hotkey to mark, one hotkey to cycle. It's a bookmark for your attention — you mark a window when you think "I need to come back to this", and the mark ensures you won't forget.
+
+## Features
+
+- **Mark/unmark** any window in one keystroke — no typing, no clicking, no context switch
+- **Cycle** through only your marked windows, skipping the noise
+- **Exposé panel** — full-screen overlay with live thumbnails of all your marks
+- **Chrome tab tracking** — marks individual tabs, not just whole windows
+- **Floating palette** — always-visible list of your marks, draggable to any corner
+- **Menu bar** — cairn icon shows your mark count; click to see the list or focus any window
+- **Gesture support** — Option + trackpad swipe to cycle
+- **Auto-cleanup** — marks are removed when windows close or apps quit
+- **Launch at Login** — optional, toggle from the menu bar
+- Works across all apps. Zero dependencies. Pure Swift.
 
 ## Install
 
-### Download
-
-1. Download the latest `.dmg` from [GitHub Releases](https://github.com/ArielTM/Waymark/releases)
-2. Open the DMG and drag **Waymark** to **Applications**
-3. Launch Waymark from Applications
-
-> **Note:** Waymark is not notarized yet. On first launch, macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog. You only need to do this once.
-
-### Homebrew
+**Homebrew:**
 
 ```bash
 brew install --cask atrandom/tap/waymark
 ```
 
-## Permissions
+**Manual:** Download the latest `.dmg` from [GitHub Releases](https://github.com/ArielTM/Waymark/releases), open it, drag **Waymark** to **Applications**.
 
-### Accessibility (Required)
-
-Waymark needs Accessibility permission to detect global hotkeys and manage windows. On first launch, you'll be prompted to grant access.
-
-**To grant manually:**
-1. Open **System Settings > Privacy & Security > Accessibility**
-2. Click the **+** button
-3. Navigate to and add `Waymark.app`
-4. Enable the toggle
-
-### Screen Recording (Optional)
-
-Screen Recording permission is needed to show live window thumbnails in the Expose panel. Without it, app icons are shown as placeholders.
-
-**To grant:**
-1. Open **System Settings > Privacy & Security > Screen Recording**
-2. Click the **+** button
-3. Add `Waymark.app`
-4. Enable the toggle
-
-> **Note:** On macOS 15 (Sequoia), you may need to re-authorize these permissions periodically.
+> **Note:** Waymark is not notarized yet. On first launch, macOS will block it. Right-click the app → **Open** → click **Open** in the dialog. You only need to do this once.
 
 ## Hotkeys
 
 | Hotkey | Action |
 |--------|--------|
-| `⌃⌥M` (Control + Option + M) | Toggle mark on the focused window |
-| `⌃⌥N` (Control + Option + N) | Cycle forward through marked windows |
-| `⌃⌥⇧N` (Control + Option + Shift + N) | Cycle backward through marked windows |
-| `⌃⌥L` (Control + Option + L) | Show Expose panel with window thumbnails |
-| `⌃⌥C` (Control + Option + C) | Clear all marked windows |
+| `⌃⌥M` | Toggle mark on focused window |
+| `⌃⌥N` | Cycle forward through marks |
+| `⌃⌥⇧N` | Cycle backward |
+| `⌃⌥L` | Exposé panel (thumbnails of all marks) |
+| `⌃⌥C` | Clear all marks |
 
-## Menu Bar
+Also: **Option + trackpad swipe** left/right to cycle.
 
-- **Empty watchlist:** Outline bookmark icon
-- **Non-empty watchlist:** Filled bookmark icon + count
-- Click the icon to see the list of marked windows, focus any window, or clear all
-- **Launch at Login** toggle to start Waymark automatically
-- **About Waymark** to see version info and links
+## Usage
 
-## Expose Panel
+### Menu Bar
+
+<!-- TODO: Add menu bar screenshot (docs/assets/menu-bar.png) -->
+
+- Cairn icon: outline when empty, filled + count when marks exist
+- Click to see the list, focus any window, or clear all
+- Toggle **Launch at Login**
+
+### Exposé Panel
+
+<!-- TODO: Add exposé panel screenshot (docs/assets/expose.png) -->
 
 Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked windows.
 
 - **Arrow keys** to navigate the grid
 - **Enter** to focus the selected window
-- **1-9** to jump directly to a window by number
+- **1–9** to jump directly to a window by number
 - **Escape** or click outside to dismiss
-- **Click** a thumbnail to focus that window
 
-## Changing Hotkeys
+### Floating Palette
 
-Edit `Waymark/Config/HotkeyConfig.swift` and rebuild. Each hotkey is defined as a key code + modifier combination:
+<!-- TODO: Add floating palette screenshot (docs/assets/palette.png) -->
 
-```swift
-// Example: Change toggle mark to Control + Option + B
-static let toggleMark = (key: CGKeyCode(0x0B), mods: CGEventFlags.maskControl.union(.maskAlternate))
-```
+An always-visible list of your marked windows with app icons.
 
-Key codes are macOS virtual key codes. Common ones:
-- `0x00` = A, `0x0B` = B, `0x08` = C, ..., `0x2E` = M, `0x2D` = N
-- Full reference: [Events.h virtual key codes](https://stackoverflow.com/q/3202629)
+- Drag to any corner of the screen
+- Hides automatically on full screen
 
-## Development
+## Permissions
 
-### Requirements
+Waymark needs a few macOS permissions to do its job. You'll be prompted on first launch.
 
-- macOS 14.0 (Sonoma) or later
-- Xcode 15+ (or just the Command Line Tools)
-- [xcodegen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
+**Accessibility** (required)
+Waymark uses the Accessibility API to detect global hotkeys (via CGEventTap) and to focus, raise, and manage windows across all apps (via AXUIElement). Without this, hotkeys won't work and windows can't be switched.
 
-### Building from Source
+**Screen Recording** (optional)
+Used to capture live window thumbnails for the Exposé panel (via ScreenCaptureKit). Without it, Waymark shows app icons as placeholders instead — everything else works normally.
+
+**Automation** (optional)
+Needed for Chrome tab tracking. Waymark uses AppleScript to enumerate and switch individual Chrome tabs. Without it, Chrome windows are tracked as whole windows only.
+
+<details>
+<summary>Manual permission grant instructions</summary>
+
+### Accessibility
+
+1. Open **System Settings > Privacy & Security > Accessibility**
+2. Click the **+** button
+3. Navigate to and add `Waymark.app`
+4. Enable the toggle
+
+### Screen Recording
+
+1. Open **System Settings > Privacy & Security > Screen Recording**
+2. Click the **+** button
+3. Add `Waymark.app`
+4. Enable the toggle
+
+### Automation
+
+Granted automatically via a one-time dialog when Waymark first tries to control Chrome. Click **OK** to allow.
+
+> **Note:** On macOS 15 (Sequoia), you may need to re-authorize Accessibility and Input Monitoring periodically.
+
+</details>
+
+## Building from Source
+
+Requires macOS 14.0+, Xcode 15+, and [XcodeGen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`).
 
 ```bash
-# Generate the Xcode project
 xcodegen generate
-
-# Build
 xcodebuild -scheme Waymark -configuration Debug build
-
-# Find and launch the built app
-open ~/Library/Developer/Xcode/DerivedData/Waymark-*/Build/Products/Debug/Waymark.app
 ```
 
 Or open `Waymark.xcodeproj` in Xcode and hit Run.
@@ -131,15 +150,12 @@ Or open `Waymark.xcodeproj` in Xcode and hit Run.
 
 ## Uninstall
 
-1. Quit Waymark (click the menu bar icon > Quit)
+1. Quit Waymark (click the menu bar icon → **Quit**)
 2. Delete `Waymark.app` from Applications
 3. Optionally remove preferences: `defaults delete io.atrandom.Waymark`
 
 If installed via Homebrew: `brew uninstall waymark`
 
-## Known Limitations
+## License
 
-- **Not notarized** — macOS will warn on first launch. Right-click > Open to bypass.
-- **No auto-update** — check GitHub Releases for new versions manually.
-- **Hotkeys are not configurable in-app** — edit `HotkeyConfig.swift` and rebuild (see [Changing Hotkeys](#changing-hotkeys)).
-- **Permissions reset on macOS 15** — Sequoia may periodically ask you to re-authorize Accessibility and Input Monitoring.
+[MIT](LICENSE)
