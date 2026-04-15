@@ -7,17 +7,15 @@ import SwiftUI
 enum PalettePosition: String, CaseIterable {
     case none = "none"
     case topRight = "topRight"
+    case centerRight = "centerRight"
     case bottomRight = "bottomRight"
-    case rightCenter = "rightCenter"
-    case belowIcon = "belowIcon"
 
     var displayName: String {
         switch self {
         case .none: return "None (Hidden)"
         case .topRight: return "Top Right"
+        case .centerRight: return "Center Right"
         case .bottomRight: return "Bottom Right"
-        case .rightCenter: return "Right Center"
-        case .belowIcon: return "Below Icon"
         }
     }
 
@@ -173,16 +171,10 @@ final class PalettePanelController {
                 x: visibleFrame.maxX - panelSize.width - 10,
                 y: visibleFrame.minY + 10
             )
-        case .rightCenter:
+        case .centerRight:
             origin = NSPoint(
                 x: visibleFrame.maxX - panelSize.width - 10,
                 y: visibleFrame.midY - panelSize.height / 2
-            )
-        case .belowIcon:
-            // Position near the right side of the menu bar
-            origin = NSPoint(
-                x: visibleFrame.maxX - panelSize.width - 10,
-                y: visibleFrame.maxY - panelSize.height - 5
             )
         case .none:
             return
