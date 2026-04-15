@@ -1,9 +1,11 @@
+import ServiceManagement
 import SwiftUI
 
 struct MenuBarView: View {
     let watchlistManager: WatchlistManager
     @State private var selectedPosition = PalettePosition.stored
     @State private var hideOnFullScreen = PaletteSettings.hideOnFullScreen
+    @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
 
     var body: some View {
         if watchlistManager.targets.isEmpty {
@@ -60,6 +62,23 @@ struct MenuBarView: View {
             set: { newValue in
                 hideOnFullScreen = newValue
                 PaletteSettings.hideOnFullScreen = newValue
+            }
+        ))
+
+        Toggle("Launch at Login", isOn: Binding(
+            get: { launchAtLogin },
+            set: { newValue in
+                do {
+                    if newValue {
+                        try SMAppService.mainApp.register()
+                    } else {
+                        try SMAppService.mainApp.unregister()
+                    }
+                    launchAtLogin = SMAppService.mainApp.status == .enabled
+                } catch {
+                    NSLog("[WindowMark] Launch at Login error: %@", error.localizedDescription)
+                    launchAtLogin = SMAppService.mainApp.status == .enabled
+                }
             }
         ))
 
