@@ -1,4 +1,5 @@
 import AppKit
+import ApplicationServices
 import SwiftUI
 
 // MARK: - Palette Position
@@ -33,6 +34,21 @@ enum PalettePosition: String, CaseIterable {
     }
 }
 
+// MARK: - Palette Settings
+
+enum PaletteSettings {
+    static var hideOnFullScreen: Bool {
+        get {
+            // Default to true — UserDefaults.bool returns false for unset keys
+            if UserDefaults.standard.object(forKey: "paletteHideOnFullScreen") == nil {
+                return true
+            }
+            return UserDefaults.standard.bool(forKey: "paletteHideOnFullScreen")
+        }
+        set { UserDefaults.standard.set(newValue, forKey: "paletteHideOnFullScreen") }
+    }
+}
+
 // MARK: - Palette Panel (Minimal HUD)
 
 final class PalettePanel: NSPanel {
@@ -52,16 +68,6 @@ final class PalettePanel: NSPanel {
         isMovableByWindowBackground = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
-
-        // Vibrancy blur background
-        let effectView = NSVisualEffectView()
-        effectView.material = .menu
-        effectView.blendingMode = .behindWindow
-        effectView.state = .active
-        effectView.wantsLayer = true
-        effectView.layer?.cornerRadius = 12
-        effectView.layer?.masksToBounds = true
-        contentView = effectView
     }
 
     override var canBecomeKey: Bool { false }
@@ -75,6 +81,7 @@ final class PalettePanelController {
     private var panel: PalettePanel?
     private var hostingView: NSHostingView<PaletteView>?
     private var currentPosition: PalettePosition = PalettePosition.stored
+    private var lastTargetCount: Int = 0
 
     func update(watchlistManager: WatchlistManager) {
         let position = PalettePosition.stored
@@ -82,6 +89,15 @@ final class PalettePanelController {
 
         // Hide if position is "none" or no targets
         if position == .none || targets.isEmpty {
+            panel?.orderOut(nil)
+            return
+        }
+
+        // Hide when a full-screen app is active.  Collection behavior
+        // can't do this (.canJoinAllSpaces overrides .fullScreenAuxiliary)
+        // and visibleFrame comparison is unreliable on notched Macs.
+        // kAXFullscreenAttribute is a public API we already have permission for.
+        if PaletteSettings.hideOnFullScreen && Self.isFrontmostAppFullScreen() {
             panel?.orderOut(nil)
             return
         }
@@ -99,39 +115,33 @@ final class PalettePanelController {
             currentPosition = position
         }
 
-        let paletteView = PaletteView(
-            targets: targets,
-            currentIndex: watchlistManager.currentIndex,
-            onSelect: { [weak watchlistManager] index in
-                watchlistManager?.focusTarget(at: index)
-            }
-        )
-
-        // Reuse the hosting view — recreating it each tick races with AppKit's
-        // display cycle and crashes in _postWindowNeedsUpdateConstraints.
-        if let hostingView {
-            hostingView.rootView = paletteView
-        } else {
-            let hv = NSHostingView(rootView: paletteView)
-            // Prevent NSHostingView from negotiating min/max content size with
-            // the borderless panel — that path crashes during constraint updates.
+        // Create the hosting view once.  PaletteView observes the
+        // WatchlistManager directly via @Observable, so SwiftUI handles
+        // content updates internally — no rootView replacement needed,
+        // which avoids the _NSViewUpdateConstraints crash.
+        if hostingView == nil {
+            let hv = NSHostingView(rootView: PaletteView(watchlistManager: watchlistManager))
             hv.sizingOptions = .intrinsicContentSize
-            if let effectView = panel?.contentView as? NSVisualEffectView {
-                hv.frame = NSRect(origin: .zero, size: hv.fittingSize)
-                effectView.addSubview(hv)
-            }
+            panel?.contentView = hv
+            // Force constraint resolution now so the display cycle finds
+            // consistent state instead of crashing in _NSViewUpdateConstraints.
+            hv.layoutSubtreeIfNeeded()
             hostingView = hv
         }
 
         guard let panel, let hostingView else { return }
 
-        let contentSize = hostingView.fittingSize
-        let maxHeight: CGFloat = 300
-        let height = min(contentSize.height, maxHeight)
-        var frame = panel.frame
-        frame.size = NSSize(width: 220, height: height)
-        panel.setFrame(frame, display: false)
-        hostingView.frame = NSRect(origin: .zero, size: NSSize(width: 220, height: height))
+        // Only resize when target count changes to avoid poking the
+        // constraint system on every timer tick.
+        if targets.count != lastTargetCount {
+            let contentSize = hostingView.fittingSize
+            let maxHeight: CGFloat = 300
+            let height = min(contentSize.height, maxHeight)
+            panel.setContentSize(NSSize(width: 220, height: height))
+            hostingView.layoutSubtreeIfNeeded()
+            applyPosition(currentPosition)
+            lastTargetCount = targets.count
+        }
 
         if !panel.isVisible {
             panel.orderFrontRegardless()
@@ -179,5 +189,20 @@ final class PalettePanelController {
         }
 
         panel.setFrameOrigin(origin)
+    }
+
+    private static func isFrontmostAppFullScreen() -> Bool {
+        guard let frontApp = NSWorkspace.shared.frontmostApplication else { return false }
+        let appElement = AXUIElementCreateApplication(frontApp.processIdentifier)
+
+        var windowRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &windowRef) == .success,
+              let window = windowRef else { return false }
+
+        var fullScreenRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(window as! AXUIElement, "AXFullScreen" as CFString, &fullScreenRef) == .success else {
+            return false
+        }
+        return (fullScreenRef as? Bool) == true
     }
 }
