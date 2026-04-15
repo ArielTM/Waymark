@@ -1,29 +1,37 @@
 # WindowMark
 
-A macOS menu bar app that lets you **mark** specific windows and cycle through them with global hotkeys. Think of it as a "favorites" list for windows you need to keep checking back on.
+A macOS menu bar app for **marking windows you need to come back to** and cycling through them with global hotkeys.
 
-Solves the problem of losing track of important windows when context-switching between many Chrome profiles, VS Code instances, and LLM sessions.
+## The Problem
 
-## Requirements
+Your brain holds 3–5 things in working memory. When you're juggling 15+ windows — Chrome profiles, VS Code instances, terminals, LLM sessions — you forget what you need to check back on. Every existing tool either cycles through *all* windows (Cmd+Tab, AltTab) or arranges them on screen (Rectangle, Stage Manager). None of them answer the question: **"which windows actually matter to me right now?"**
 
-- macOS 14.0 (Sonoma) or later
-- Xcode 15+ (or just the Command Line Tools)
-- [xcodegen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
+## The Solution
 
-## Build
+WindowMark lets you mark the windows you care about and ignore everything else. One hotkey to mark, one hotkey to cycle through your marks. It's a bookmark for your attention — you mark a window when you think "I need to come back to this", and the mark ensures you won't forget.
+
+- Mark a window in one keystroke — no typing, no clicking, no context switch
+- Cycle through only your marked windows, skipping the noise
+- Works across all apps: browsers, editors, terminals, anything with a window
+- Tracks individual Chrome tabs, not just whole windows
+- Expose panel shows thumbnails of all your marks at a glance
+- Floating palette keeps your marks visible without taking focus
+
+## Install
+
+### Download
+
+1. Download the latest `.dmg` from [GitHub Releases](https://github.com/AtrRandom/WindowMark/releases)
+2. Open the DMG and drag **WindowMark** to **Applications**
+3. Launch WindowMark from Applications
+
+> **Note:** WindowMark is not notarized yet. On first launch, macOS will block it. Right-click (or Control-click) the app and select **Open**, then click **Open** in the dialog. You only need to do this once.
+
+### Homebrew
 
 ```bash
-# Generate the Xcode project
-xcodegen generate
-
-# Build
-xcodebuild -scheme WindowMark -configuration Debug build
-
-# Find and launch the built app
-open ~/Library/Developer/Xcode/DerivedData/WindowMark-*/Build/Products/Debug/WindowMark.app
+brew install --cask atrandom/tap/windowmark
 ```
-
-Or open `WindowMark.xcodeproj` in Xcode and hit Run.
 
 ## Permissions
 
@@ -63,7 +71,9 @@ Screen Recording permission is needed to show live window thumbnails in the Expo
 
 - **Empty watchlist:** Outline bookmark icon
 - **Non-empty watchlist:** Filled bookmark icon + count
-- Click the icon to see the list of marked windows, focus any window, clear all, or quit
+- Click the icon to see the list of marked windows, focus any window, or clear all
+- **Launch at Login** toggle to start WindowMark automatically
+- **About WindowMark** to see version info and links
 
 ## Expose Panel
 
@@ -88,6 +98,29 @@ Key codes are macOS virtual key codes. Common ones:
 - `0x00` = A, `0x0B` = B, `0x08` = C, ..., `0x2E` = M, `0x2D` = N
 - Full reference: [Events.h virtual key codes](https://stackoverflow.com/q/3202629)
 
+## Development
+
+### Requirements
+
+- macOS 14.0 (Sonoma) or later
+- Xcode 15+ (or just the Command Line Tools)
+- [xcodegen](https://github.com/yonaskolb/XcodeGen): `brew install xcodegen`
+
+### Building from Source
+
+```bash
+# Generate the Xcode project
+xcodegen generate
+
+# Build
+xcodebuild -scheme WindowMark -configuration Debug build
+
+# Find and launch the built app
+open ~/Library/Developer/Xcode/DerivedData/WindowMark-*/Build/Products/Debug/WindowMark.app
+```
+
+Or open `WindowMark.xcodeproj` in Xcode and hit Run.
+
 ## How It Works
 
 - **Mark/Unmark:** Gets the focused window via the Accessibility API, stores its window ID
@@ -95,3 +128,18 @@ Key codes are macOS virtual key codes. Common ones:
 - **Auto-cleanup:** Watches for app termination and window closure; validates the watchlist every 5 seconds
 - **Thumbnails:** Captured via ScreenCaptureKit (SCScreenshotManager)
 - **Global hotkeys:** Registered via CGEventTap
+
+## Uninstall
+
+1. Quit WindowMark (click the menu bar icon > Quit)
+2. Delete `WindowMark.app` from Applications
+3. Optionally remove preferences: `defaults delete io.atrandom.WindowMark`
+
+If installed via Homebrew: `brew uninstall windowmark`
+
+## Known Limitations
+
+- **Not notarized** — macOS will warn on first launch. Right-click > Open to bypass.
+- **No auto-update** — check GitHub Releases for new versions manually.
+- **Hotkeys are not configurable in-app** — edit `HotkeyConfig.swift` and rebuild (see [Changing Hotkeys](#changing-hotkeys)).
+- **Permissions reset on macOS 15** — Sequoia may periodically ask you to re-authorize Accessibility and Input Monitoring.
