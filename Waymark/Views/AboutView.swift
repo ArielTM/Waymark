@@ -38,7 +38,7 @@ struct AboutView: View {
             }
 
             Button("GitHub") {
-                if let url = URL(string: "https://github.com/AtrRandom/WindowMark") {
+                if let url = URL(string: "https://github.com/ArielTM/Waymark") {
                     NSWorkspace.shared.open(url)
                 }
             }

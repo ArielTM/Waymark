@@ -21,7 +21,7 @@ Waymark lets you mark the windows you care about and ignore everything else. One
 
 ### Download
 
-1. Download the latest `.dmg` from [GitHub Releases](https://github.com/AtrRandom/Waymark/releases)
+1. Download the latest `.dmg` from [GitHub Releases](https://github.com/ArielTM/Waymark/releases)
 2. Open the DMG and drag **Waymark** to **Applications**
 3. Launch Waymark from Applications
 

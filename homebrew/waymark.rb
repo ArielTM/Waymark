@@ -6,10 +6,10 @@ cask "waymark" do
   version "1.0.0"
   sha256 "REPLACE_WITH_SHA256_FROM_RELEASE"
 
-  url "https://github.com/AtrRandom/WindowMark/releases/download/v#{version}/Waymark-#{version}-universal.dmg"
+  url "https://github.com/ArielTM/Waymark/releases/download/v#{version}/Waymark-#{version}-universal.dmg"
   name "Waymark"
   desc "Mark windows you need to come back to and cycle through them with hotkeys"
-  homepage "https://github.com/AtrRandom/WindowMark"
+  homepage "https://github.com/ArielTM/Waymark"
 
   app "Waymark.app"
 
