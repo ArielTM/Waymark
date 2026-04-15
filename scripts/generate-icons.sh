@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ./scripts/generate-icons.sh path/to/icon-1024.png
 
 SOURCE="${1:?Usage: $0 <path-to-1024x1024-png>}"
-DEST="WindowMark/Assets.xcassets/AppIcon.appiconset"
+DEST="Waymark/Assets.xcassets/AppIcon.appiconset"
 
 if [ ! -f "$SOURCE" ]; then
     echo "Error: Source file not found: $SOURCE"

@@ -14,7 +14,7 @@ targets:
       - Waymark
     settings:
       base:
-        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_IDENTITY: "Waymark Dev"
         CODE_SIGN_STYLE: Manual
         PRODUCT_BUNDLE_IDENTIFIER: io.atrandom.Waymark
         SWIFT_VERSION: "6.0"

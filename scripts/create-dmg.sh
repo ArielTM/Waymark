@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-# Create a DMG from a built WindowMark.app
-# Usage: ./scripts/create-dmg.sh <path-to-WindowMark.app> [version]
+# Create a DMG from a built Waymark.app
+# Usage: ./scripts/create-dmg.sh <path-to-Waymark.app> [version]
 
-APP_PATH="${1:?Usage: $0 <path-to-WindowMark.app> [version]}"
+APP_PATH="${1:?Usage: $0 <path-to-Waymark.app> [version]}"
 VERSION="${2:-dev}"
 
 if [ ! -d "$APP_PATH" ]; then
@@ -15,7 +15,7 @@ fi
 OUTPUT_DIR="build"
 mkdir -p "$OUTPUT_DIR"
 
-DMG_NAME="WindowMark-${VERSION}-universal.dmg"
+DMG_NAME="Waymark-${VERSION}-universal.dmg"
 DMG_PATH="${OUTPUT_DIR}/${DMG_NAME}"
 
 rm -f "$DMG_PATH"
@@ -27,7 +27,7 @@ cp -R "$APP_PATH" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 
 hdiutil create \
-    -volname "WindowMark" \
+    -volname "Waymark" \
     -srcfolder "$STAGING" \
     -ov \
     -format UDZO \
