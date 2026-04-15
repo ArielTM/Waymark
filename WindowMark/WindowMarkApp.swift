@@ -5,7 +5,6 @@ import ApplicationServices
 final class AppState: ObservableObject {
     let watchlistManager: WatchlistManager
     let hotkeyManager: HotkeyManager
-    let borderOverlayManager: BorderOverlayManager
     let gestureManager = GestureManager()
     let paletteController = PalettePanelController()
     private var permissionTimer: Timer?
@@ -15,7 +14,6 @@ final class AppState: ObservableObject {
         let windowManager = WindowManager()
         self.watchlistManager = WatchlistManager(windowManager: windowManager)
         self.hotkeyManager = HotkeyManager()
-        self.borderOverlayManager = BorderOverlayManager(windowManager: windowManager)
 
         // Defer startup to avoid running modal alerts during SwiftUI init
         DispatchQueue.main.async { [self] in
@@ -39,7 +37,7 @@ final class AppState: ObservableObject {
         hotkeyManager.start()
         startCleanupTimer()
         startAppTerminationObserver()
-        startBorderOverlay()
+        startPalette()
         wireGestures()
         gestureManager.start()
     }
@@ -135,11 +133,10 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func startBorderOverlay() {
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+    private func startPalette() {
+        Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.borderOverlayManager.update(windows: self.watchlistManager.windows)
                 self.paletteController.update(watchlistManager: self.watchlistManager)
             }
         }

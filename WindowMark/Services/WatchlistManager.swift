@@ -15,9 +15,6 @@ final class WatchlistManager {
     let windowManager: WindowManager
     private var observers: [CGWindowID: AXObserver] = [:]
 
-    /// Called when a watched window moves or resizes. Used by BorderOverlayManager.
-    var onWindowMoved: ((CGWindowID) -> Void)?
-
     init(windowManager: WindowManager) {
         self.windowManager = windowManager
         WatchlistManager.shared = self
@@ -163,19 +160,12 @@ final class WatchlistManager {
         )
         context.storeBytes(of: windowID, as: CGWindowID.self)
 
-        let callback: AXObserverCallback = { _, _, notification, refcon in
+        let callback: AXObserverCallback = { _, _, _, refcon in
             guard let refcon else { return }
             let wid = refcon.load(as: CGWindowID.self)
-            let name = notification as String
-
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
-                    if name == kAXUIElementDestroyedNotification as String {
-                        WatchlistManager.shared?.removeWindow(byID: wid)
-                    } else {
-                        // kAXMovedNotification or kAXResizedNotification
-                        WatchlistManager.shared?.onWindowMoved?(wid)
-                    }
+                    WatchlistManager.shared?.removeWindow(byID: wid)
                 }
             }
         }
@@ -187,8 +177,6 @@ final class WatchlistManager {
         }
 
         AXObserverAddNotification(observer, axElement, kAXUIElementDestroyedNotification as CFString, context)
-        AXObserverAddNotification(observer, axElement, kAXMovedNotification as CFString, context)
-        AXObserverAddNotification(observer, axElement, kAXResizedNotification as CFString, context)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), AXObserverGetRunLoopSource(observer), .defaultMode)
 
         observers[windowID] = observer
