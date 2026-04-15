@@ -1,6 +1,6 @@
 name: WindowMark
 options:
-  bundleIdPrefix: com.local
+  bundleIdPrefix: io.atrandom
   deploymentTarget:
     macOS: "14.0"
   xcodeVersion: "16.0"
@@ -16,13 +16,15 @@ targets:
       base:
         CODE_SIGN_IDENTITY: "WindowMark Dev"
         CODE_SIGN_STYLE: Manual
-        PRODUCT_BUNDLE_IDENTIFIER: com.local.WindowMark
+        PRODUCT_BUNDLE_IDENTIFIER: io.atrandom.WindowMark
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: targeted
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         INFOPLIST_FILE: WindowMark/Info.plist
         CODE_SIGN_ENTITLEMENTS: WindowMark/WindowMark.entitlements
         COMBINE_HIDPI_IMAGES: true
-        ENABLE_HARDENED_RUNTIME: false
+        ENABLE_HARDENED_RUNTIME: true
     entitlements:
       path: WindowMark/WindowMark.entitlements
+      properties:
+        com.apple.security.automation.apple-events: true

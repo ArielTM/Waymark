@@ -22,5 +22,9 @@
     <true/>
     <key>NSAppleEventsUsageDescription</key>
     <string>WindowMark uses Automation to detect and switch Chrome tabs.</string>
+    <key>NSHumanReadableCopyright</key>
+    <string>Copyright © 2026 Ariel T. All rights reserved.</string>
+    <key>NSScreenRecordingUsageDescription</key>
+    <string>WindowMark uses Screen Recording to show live window thumbnails in the Exposé panel.</string>
 </dict>
 </plist>
