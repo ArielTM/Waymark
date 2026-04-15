@@ -76,7 +76,7 @@ final class ExposePanelController {
 
         let alert = NSAlert()
         alert.messageText = "Screen Recording Permission"
-        alert.informativeText = "WindowMark needs Screen Recording permission to show window thumbnails in the Exposé panel.\n\nWithout it, app icons will be shown as placeholders."
+        alert.informativeText = "Waymark needs Screen Recording permission to show window thumbnails in the Exposé panel.\n\nWithout it, app icons will be shown as placeholders."
         alert.alertStyle = .informational
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Continue Without Thumbnails")

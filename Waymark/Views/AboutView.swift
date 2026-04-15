@@ -23,7 +23,7 @@ struct AboutView: View {
                     .frame(width: 64, height: 64)
             }
 
-            Text("WindowMark")
+            Text("Waymark")
                 .font(.title2)
                 .fontWeight(.semibold)
 

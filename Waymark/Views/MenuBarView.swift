@@ -76,7 +76,7 @@ struct MenuBarView: View {
                     }
                     launchAtLogin = SMAppService.mainApp.status == .enabled
                 } catch {
-                    NSLog("[WindowMark] Launch at Login error: %@", error.localizedDescription)
+                    NSLog("[Waymark] Launch at Login error: %@", error.localizedDescription)
                     launchAtLogin = SMAppService.mainApp.status == .enabled
                 }
             }
@@ -96,11 +96,11 @@ struct MenuBarView: View {
 
         Divider()
 
-        Button("About WindowMark") {
+        Button("About Waymark") {
             AboutPanelController.shared.show()
         }
 
-        Button("Quit WindowMark") {
+        Button("Quit Waymark") {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q")

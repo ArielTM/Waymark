@@ -87,9 +87,9 @@ final class ChromeTabService {
         if let error {
             let errorNumber = error[NSAppleScript.errorNumber] as? Int
             if errorNumber == -1743 {
-                print("[WindowMark] AppleScript permission denied. Grant Automation access in System Settings.")
+                print("[Waymark] AppleScript permission denied. Grant Automation access in System Settings.")
             } else {
-                print("[WindowMark] AppleScript error: \(error)")
+                print("[Waymark] AppleScript error: \(error)")
             }
             return nil
         }

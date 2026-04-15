@@ -150,7 +150,7 @@ final class WatchlistManager {
 
         let removed = before - targets.count
         if removed > 0 {
-            print("[WindowMark] Removed \(removed) stale target(s). \(targets.count) remaining.")
+            print("[Waymark] Removed \(removed) stale target(s). \(targets.count) remaining.")
         }
     }
 
@@ -173,7 +173,7 @@ final class WatchlistManager {
 
         let removed = before - targets.count
         if removed > 0 {
-            print("[WindowMark] App terminated (PID \(pid)). Removed \(removed) target(s).")
+            print("[Waymark] App terminated (PID \(pid)). Removed \(removed) target(s).")
         }
     }
 
@@ -194,7 +194,7 @@ final class WatchlistManager {
             currentIndex = targets.count - 1
         }
 
-        print("[WindowMark] Window \(windowID) destroyed. \(targets.count) remaining.")
+        print("[Waymark] Window \(windowID) destroyed. \(targets.count) remaining.")
     }
 
     // MARK: - Private

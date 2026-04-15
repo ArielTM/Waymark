@@ -24,7 +24,7 @@ final class HotkeyManager: @unchecked Sendable {
             callback: hotkeyCallback,
             userInfo: selfPtr
         ) else {
-            NSLog("[WindowMark] Failed to create event tap. Accessibility permission may not be granted.")
+            NSLog("[Waymark] Failed to create event tap. Accessibility permission may not be granted.")
             return
         }
 
@@ -32,7 +32,7 @@ final class HotkeyManager: @unchecked Sendable {
         self.runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        NSLog("[WindowMark] Event tap created and enabled successfully")
+        NSLog("[Waymark] Event tap created and enabled successfully")
     }
 
     func stop() {

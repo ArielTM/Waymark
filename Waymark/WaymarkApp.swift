@@ -20,13 +20,13 @@ final class AppState: ObservableObject {
         DispatchQueue.main.async { [self] in
             let axTrusted = AXIsProcessTrusted()
             let inputAccess = CGPreflightListenEventAccess()
-            NSLog("[WindowMark] AXIsProcessTrusted: %d, CGPreflightListenEventAccess: %d", axTrusted ? 1 : 0, inputAccess ? 1 : 0)
+            NSLog("[Waymark] AXIsProcessTrusted: %d, CGPreflightListenEventAccess: %d", axTrusted ? 1 : 0, inputAccess ? 1 : 0)
 
             if axTrusted && inputAccess {
                 self.startServices()
-                NSLog("[WindowMark] Services started")
+                NSLog("[Waymark] Services started")
             } else {
-                NSLog("[WindowMark] Requesting permissions")
+                NSLog("[Waymark] Requesting permissions")
                 self.requestPermissions(axTrusted: axTrusted, inputAccess: inputAccess)
                 self.startPermissionPolling()
             }
@@ -99,13 +99,13 @@ final class AppState: ObservableObject {
             MainActor.assumeIsolated {
                 let ax = AXIsProcessTrusted()
                 let input = CGPreflightListenEventAccess()
-                NSLog("[WindowMark] Polling — AX: %d, Input: %d", ax ? 1 : 0, input ? 1 : 0)
+                NSLog("[Waymark] Polling — AX: %d, Input: %d", ax ? 1 : 0, input ? 1 : 0)
                 if ax && input {
-                    NSLog("[WindowMark] All permissions granted")
+                    NSLog("[Waymark] All permissions granted")
                     self?.permissionTimer?.invalidate()
                     self?.permissionTimer = nil
                     self?.startServices()
-                    NSLog("[WindowMark] Services started")
+                    NSLog("[Waymark] Services started")
                 }
             }
         }
@@ -158,7 +158,7 @@ final class AppState: ObservableObject {
 }
 
 @main
-struct WindowMarkApp: App {
+struct WaymarkApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {

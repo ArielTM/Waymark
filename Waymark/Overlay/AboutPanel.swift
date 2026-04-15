@@ -12,7 +12,7 @@ final class AboutPanel: NSPanel {
             defer: true
         )
 
-        title = "About WindowMark"
+        title = "About Waymark"
         level = .floating
         isReleasedWhenClosed = false
     }
