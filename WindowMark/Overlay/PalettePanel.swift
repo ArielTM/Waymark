@@ -73,6 +73,7 @@ final class PalettePanel: NSPanel {
 @MainActor
 final class PalettePanelController {
     private var panel: PalettePanel?
+    private var hostingView: NSHostingView<PaletteView>?
     private var currentPosition: PalettePosition = PalettePosition.stored
 
     func update(watchlistManager: WatchlistManager) {
@@ -106,31 +107,38 @@ final class PalettePanelController {
             }
         )
 
-        let hostingView = NSHostingView(rootView: paletteView)
-        hostingView.frame.size = hostingView.fittingSize
-
-        // Embed in the effect view
-        if let effectView = panel?.contentView as? NSVisualEffectView {
-            effectView.subviews.forEach { $0.removeFromSuperview() }
-            hostingView.frame = NSRect(origin: .zero, size: hostingView.fittingSize)
-            effectView.addSubview(hostingView)
+        // Reuse existing hosting view — replacing it each tick races with AppKit's
+        // constraint update cycle and crashes in _postWindowNeedsUpdateConstraints.
+        if let hostingView {
+            hostingView.rootView = paletteView
+        } else {
+            let hv = NSHostingView(rootView: paletteView)
+            if let effectView = panel?.contentView as? NSVisualEffectView {
+                hv.frame = NSRect(origin: .zero, size: hv.fittingSize)
+                effectView.addSubview(hv)
+            }
+            hostingView = hv
         }
+
+        guard let panel, let hostingView else { return }
 
         let contentSize = hostingView.fittingSize
         let maxHeight: CGFloat = 300
         let height = min(contentSize.height, maxHeight)
-        var frame = panel!.frame
+        var frame = panel.frame
         frame.size = NSSize(width: 220, height: height)
-        panel?.setFrame(frame, display: false)
+        panel.setFrame(frame, display: false)
+        hostingView.frame = NSRect(origin: .zero, size: NSSize(width: 220, height: height))
 
-        if panel?.isVisible != true {
-            panel?.orderFrontRegardless()
+        if !panel.isVisible {
+            panel.orderFrontRegardless()
         }
     }
 
     func stop() {
         panel?.orderOut(nil)
         panel = nil
+        hostingView = nil
     }
 
     // MARK: - Private
