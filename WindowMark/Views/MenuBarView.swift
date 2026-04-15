@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     let watchlistManager: WatchlistManager
+    @State private var selectedPosition = PalettePosition.stored
 
     var body: some View {
         if watchlistManager.windows.isEmpty {
@@ -35,13 +36,31 @@ struct MenuBarView: View {
 
         Divider()
 
+        // Palette Position submenu
+        Menu("Palette Position") {
+            ForEach(PalettePosition.allCases, id: \.rawValue) { position in
+                Button {
+                    selectedPosition = position
+                    PalettePosition.stored = position
+                } label: {
+                    HStack {
+                        Text(position.displayName)
+                        if position == selectedPosition {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        }
+
         if !watchlistManager.windows.isEmpty {
             Button("Clear All", role: .destructive) {
                 watchlistManager.clearAll()
             }
-
-            Divider()
         }
+
+        Divider()
 
         Text("⌃⌥M mark · ⌃⌥N cycle · ⌃⌥L exposé")
             .font(.caption)
