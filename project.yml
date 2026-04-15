@@ -1,4 +1,4 @@
-name: WindowMark
+name: Waymark
 options:
   bundleIdPrefix: io.atrandom
   deploymentTarget:
@@ -7,27 +7,27 @@ options:
   generateEmptyDirectories: true
 
 targets:
-  WindowMark:
+  Waymark:
     type: application
     platform: macOS
     sources:
-      - WindowMark
+      - Waymark
     settings:
       base:
-        CODE_SIGN_IDENTITY: "WindowMark Dev"
+        CODE_SIGN_IDENTITY: "-"
         CODE_SIGN_STYLE: Manual
-        PRODUCT_BUNDLE_IDENTIFIER: io.atrandom.WindowMark
+        PRODUCT_BUNDLE_IDENTIFIER: io.atrandom.Waymark
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: targeted
         MACOSX_DEPLOYMENT_TARGET: "14.0"
-        INFOPLIST_FILE: WindowMark/Info.plist
-        CODE_SIGN_ENTITLEMENTS: WindowMark/WindowMark.entitlements
+        INFOPLIST_FILE: Waymark/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Waymark/Waymark.entitlements
         COMBINE_HIDPI_IMAGES: true
       debug:
         ENABLE_HARDENED_RUNTIME: false
       release:
         ENABLE_HARDENED_RUNTIME: true
     entitlements:
-      path: WindowMark/WindowMark.entitlements
+      path: Waymark/Waymark.entitlements
       properties:
         com.apple.security.automation.apple-events: true
