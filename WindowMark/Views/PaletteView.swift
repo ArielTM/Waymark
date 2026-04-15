@@ -1,21 +1,19 @@
 import SwiftUI
 
 struct PaletteView: View {
-    let targets: [WatchTarget]
-    let currentIndex: Int
-    let onSelect: (Int) -> Void
+    let watchlistManager: WatchlistManager
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if targets.isEmpty {
+            if watchlistManager.targets.isEmpty {
                 Text("No marked windows")
                     .foregroundStyle(.secondary)
                     .font(.caption)
                     .padding(8)
             } else {
-                ForEach(Array(targets.enumerated()), id: \.element.id) { index, target in
+                ForEach(Array(watchlistManager.targets.enumerated()), id: \.element.id) { index, target in
                     Button {
-                        onSelect(index)
+                        watchlistManager.focusTarget(at: index)
                     } label: {
                         HStack(spacing: 8) {
                             if let icon = target.appIcon {
@@ -28,7 +26,7 @@ struct PaletteView: View {
                                 .truncationMode(.tail)
                                 .font(.system(size: 12))
                             Spacer()
-                            if index == currentIndex {
+                            if index == watchlistManager.currentIndex {
                                 Circle()
                                     .fill(Color.orange)
                                     .frame(width: 6, height: 6)
@@ -39,10 +37,12 @@ struct PaletteView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .background(index == currentIndex ? Color.white.opacity(0.05) : Color.clear)
+                    .background(index == watchlistManager.currentIndex ? Color.white.opacity(0.05) : Color.clear)
                 }
             }
         }
         .frame(width: 220)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct MenuBarView: View {
     let watchlistManager: WatchlistManager
     @State private var selectedPosition = PalettePosition.stored
+    @State private var hideOnFullScreen = PaletteSettings.hideOnFullScreen
 
     var body: some View {
         if watchlistManager.targets.isEmpty {
@@ -53,6 +54,14 @@ struct MenuBarView: View {
                 }
             }
         }
+
+        Toggle("Hide on Full Screen", isOn: Binding(
+            get: { hideOnFullScreen },
+            set: { newValue in
+                hideOnFullScreen = newValue
+                PaletteSettings.hideOnFullScreen = newValue
+            }
+        ))
 
         if !watchlistManager.targets.isEmpty {
             Button("Clear All", role: .destructive) {
