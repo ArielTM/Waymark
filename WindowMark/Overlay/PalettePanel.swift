@@ -1,25 +1,67 @@
 import AppKit
 import SwiftUI
 
-// MARK: - Palette Panel
+// MARK: - Palette Position
+
+enum PalettePosition: String, CaseIterable {
+    case none = "none"
+    case topRight = "topRight"
+    case bottomRight = "bottomRight"
+    case rightCenter = "rightCenter"
+    case belowIcon = "belowIcon"
+
+    var displayName: String {
+        switch self {
+        case .none: return "None (Hidden)"
+        case .topRight: return "Top Right"
+        case .bottomRight: return "Bottom Right"
+        case .rightCenter: return "Right Center"
+        case .belowIcon: return "Below Icon"
+        }
+    }
+
+    static var defaultPosition: PalettePosition { .topRight }
+
+    static var stored: PalettePosition {
+        get {
+            let raw = UserDefaults.standard.string(forKey: "palettePosition") ?? defaultPosition.rawValue
+            return PalettePosition(rawValue: raw) ?? defaultPosition
+        }
+        set {
+            UserDefaults.standard.set(newValue.rawValue, forKey: "palettePosition")
+        }
+    }
+}
+
+// MARK: - Palette Panel (Minimal HUD)
 
 final class PalettePanel: NSPanel {
     init() {
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 220, height: 100),
-            styleMask: [.titled, .nonactivatingPanel, .utilityWindow, .fullSizeContentView],
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: true
         )
 
-        title = "WindowMark"
         level = .floating
         isOpaque = false
-        backgroundColor = NSColor.windowBackgroundColor
+        backgroundColor = .clear
+        hasShadow = true
+        ignoresMouseEvents = false
         isMovableByWindowBackground = true
         collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         isReleasedWhenClosed = false
-        titlebarAppearsTransparent = true
+
+        // Vibrancy blur background
+        let effectView = NSVisualEffectView()
+        effectView.material = .menu
+        effectView.blendingMode = .behindWindow
+        effectView.state = .active
+        effectView.wantsLayer = true
+        effectView.layer?.cornerRadius = 12
+        effectView.layer?.masksToBounds = true
+        contentView = effectView
     }
 
     override var canBecomeKey: Bool { false }
@@ -31,11 +73,14 @@ final class PalettePanel: NSPanel {
 @MainActor
 final class PalettePanelController {
     private var panel: PalettePanel?
+    private var currentPosition: PalettePosition = PalettePosition.stored
 
     func update(watchlistManager: WatchlistManager) {
+        let position = PalettePosition.stored
         let windows = watchlistManager.windows
 
-        if windows.isEmpty {
+        // Hide if position is "none" or no windows
+        if position == .none || windows.isEmpty {
             panel?.orderOut(nil)
             return
         }
@@ -43,7 +88,14 @@ final class PalettePanelController {
         // Create panel lazily
         if panel == nil {
             panel = PalettePanel()
-            positionOnScreen()
+            applyPosition(position)
+            currentPosition = position
+        }
+
+        // Reposition if setting changed
+        if position != currentPosition {
+            applyPosition(position)
+            currentPosition = position
         }
 
         let paletteView = PaletteView(
@@ -56,13 +108,19 @@ final class PalettePanelController {
 
         let hostingView = NSHostingView(rootView: paletteView)
         hostingView.frame.size = hostingView.fittingSize
-        panel?.contentView = hostingView
 
-        let titleBarHeight: CGFloat = 22
-        let contentHeight = hostingView.fittingSize.height + titleBarHeight
+        // Embed in the effect view
+        if let effectView = panel?.contentView as? NSVisualEffectView {
+            effectView.subviews.forEach { $0.removeFromSuperview() }
+            hostingView.frame = NSRect(origin: .zero, size: hostingView.fittingSize)
+            effectView.addSubview(hostingView)
+        }
+
+        let contentSize = hostingView.fittingSize
+        let maxHeight: CGFloat = 300
+        let height = min(contentSize.height, maxHeight)
         var frame = panel!.frame
-        frame.size.height = min(contentHeight, 322)
-        frame.size.width = 220
+        frame.size = NSSize(width: 220, height: height)
         panel?.setFrame(frame, display: false)
 
         if panel?.isVisible != true {
@@ -77,11 +135,38 @@ final class PalettePanelController {
 
     // MARK: - Private
 
-    private func positionOnScreen() {
-        guard let screen = NSScreen.main else { return }
-        let screenFrame = screen.visibleFrame
-        let x = screenFrame.maxX - 230
-        let y = screenFrame.midY
-        panel?.setFrameOrigin(NSPoint(x: x, y: y))
+    private func applyPosition(_ position: PalettePosition) {
+        guard let screen = NSScreen.main, let panel else { return }
+        let visibleFrame = screen.visibleFrame
+        let panelSize = panel.frame.size
+
+        var origin: NSPoint
+        switch position {
+        case .topRight:
+            origin = NSPoint(
+                x: visibleFrame.maxX - panelSize.width - 10,
+                y: visibleFrame.maxY - panelSize.height - 10
+            )
+        case .bottomRight:
+            origin = NSPoint(
+                x: visibleFrame.maxX - panelSize.width - 10,
+                y: visibleFrame.minY + 10
+            )
+        case .rightCenter:
+            origin = NSPoint(
+                x: visibleFrame.maxX - panelSize.width - 10,
+                y: visibleFrame.midY - panelSize.height / 2
+            )
+        case .belowIcon:
+            // Position near the right side of the menu bar
+            origin = NSPoint(
+                x: visibleFrame.maxX - panelSize.width - 10,
+                y: visibleFrame.maxY - panelSize.height - 5
+            )
+        case .none:
+            return
+        }
+
+        panel.setFrameOrigin(origin)
     }
 }
