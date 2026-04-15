@@ -22,8 +22,8 @@ enum WatchTarget: Identifiable {
         switch self {
         case .window(let w):
             return w.displayTitle
-        case .chromeTab(let w, let tab):
-            return "\(w.appName) — \(tab.titleAtMark)"
+        case .chromeTab(_, let tab):
+            return tab.titleAtMark
         }
     }
 
