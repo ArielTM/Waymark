@@ -19,32 +19,6 @@ enum PalettePosition: String, CaseIterable {
         }
     }
 
-    static var defaultPosition: PalettePosition { .topRight }
-
-    static var stored: PalettePosition {
-        get {
-            let raw = UserDefaults.standard.string(forKey: "palettePosition") ?? defaultPosition.rawValue
-            return PalettePosition(rawValue: raw) ?? defaultPosition
-        }
-        set {
-            UserDefaults.standard.set(newValue.rawValue, forKey: "palettePosition")
-        }
-    }
-}
-
-// MARK: - Palette Settings
-
-enum PaletteSettings {
-    static var hideOnFullScreen: Bool {
-        get {
-            // Default to true — UserDefaults.bool returns false for unset keys
-            if UserDefaults.standard.object(forKey: "paletteHideOnFullScreen") == nil {
-                return true
-            }
-            return UserDefaults.standard.bool(forKey: "paletteHideOnFullScreen")
-        }
-        set { UserDefaults.standard.set(newValue, forKey: "paletteHideOnFullScreen") }
-    }
 }
 
 // MARK: - Palette Panel (Minimal HUD)
@@ -78,11 +52,11 @@ final class PalettePanel: NSPanel {
 final class PalettePanelController {
     private var panel: PalettePanel?
     private var hostingView: NSHostingView<PaletteView>?
-    private var currentPosition: PalettePosition = PalettePosition.stored
+    private var currentPosition: PalettePosition = .topRight
     private var lastTargetCount: Int = 0
 
-    func update(watchlistManager: WatchlistManager) {
-        let position = PalettePosition.stored
+    func update(watchlistManager: WatchlistManager, settings: Settings) {
+        let position = settings.palettePosition
         let targets = watchlistManager.targets
 
         // Hide if position is "none" or no targets
@@ -95,7 +69,7 @@ final class PalettePanelController {
         // can't do this (.canJoinAllSpaces overrides .fullScreenAuxiliary)
         // and visibleFrame comparison is unreliable on notched Macs.
         // kAXFullscreenAttribute is a public API we already have permission for.
-        if PaletteSettings.hideOnFullScreen && Self.isFrontmostAppFullScreen() {
+        if settings.hideOnFullScreen && Self.isFrontmostAppFullScreen() {
             panel?.orderOut(nil)
             return
         }

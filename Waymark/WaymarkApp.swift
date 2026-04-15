@@ -3,6 +3,7 @@ import ApplicationServices
 
 @MainActor
 final class AppState: ObservableObject {
+    let settings = Settings()
     let watchlistManager: WatchlistManager
     let hotkeyManager: HotkeyManager
     let gestureManager = GestureManager()
@@ -138,7 +139,7 @@ final class AppState: ObservableObject {
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.paletteController.update(watchlistManager: self.watchlistManager)
+                self.paletteController.update(watchlistManager: self.watchlistManager, settings: self.settings)
             }
         }
     }
@@ -163,7 +164,7 @@ struct WaymarkApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarView(watchlistManager: appState.watchlistManager)
+            MenuBarView(watchlistManager: appState.watchlistManager, settings: appState.settings)
         } label: {
             let count = appState.watchlistManager.targets.count
             Label {
