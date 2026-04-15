@@ -15,8 +15,9 @@
   <img src="https://img.shields.io/badge/dependencies-0-brightgreen" alt="Zero Dependencies">
 </p>
 
-<!-- TODO: Add hero GIF/screenshot showing the mark → cycle → exposé flow.
-     See [redacted] Appendix: Screenshot Capture Guide -->
+<p align="center">
+  <img src="docs/assets/hero.gif" width="800" alt="Waymark demo: marking three windows and cycling through them with global hotkeys">
+</p>
 
 ---
 
