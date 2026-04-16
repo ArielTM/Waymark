@@ -51,15 +51,6 @@ final class WatchlistManager {
             }
             lastToastMessage = "− Unmarked: \(removed.displayTitle) [\(targets.count) watched]"
         } else {
-            // For chrome tabs, dedup by URL (same tab might be in a different window)
-            if case .chromeTab(_, let tab) = target,
-               targets.contains(where: {
-                   if case .chromeTab(_, let existing) = $0 { return existing.url == tab.url }
-                   return false
-               }) {
-                lastToastMessage = "Tab already marked"
-                return
-            }
             targets.append(target)
             addObserver(for: target)
             lastToastMessage = "+ Marked: \(target.displayTitle) [\(targets.count) watched]"
@@ -98,7 +89,11 @@ final class WatchlistManager {
         let target = targets[index]
         windowManager.focusWindow(target.parentWindow)
         if case .chromeTab(_, let tab) = target {
-            _ = chromeTabService.activateTab(url: tab.url)
+            if !chromeTabService.activateTab(tabId: tab.tabId) {
+                removeStaleTarget(at: index)
+                lastToastMessage = "Tab closed — mark removed"
+                return
+            }
         }
     }
 
@@ -122,7 +117,7 @@ final class WatchlistManager {
             if case .chromeTab = $0 { return true }
             return false
         }
-        let liveTabURLs: Set<String> = hasChromeTargets ? chromeTabService.allTabURLs() : []
+        let liveTabIDs: Set<Int> = hasChromeTargets ? chromeTabService.allTabIDs() : []
 
         // Collect window IDs that are about to lose all their targets
         let windowIDsBefore = Set(targets.map(\.windowID))
@@ -132,7 +127,7 @@ final class WatchlistManager {
             case .window(let w):
                 return !liveIDs.contains(w.id)
             case .chromeTab(let w, let tab):
-                return !liveIDs.contains(w.id) || !liveTabURLs.contains(tab.url)
+                return !liveIDs.contains(w.id) || !liveTabIDs.contains(tab.tabId)
             }
         }
 
@@ -199,23 +194,50 @@ final class WatchlistManager {
 
     // MARK: - Private
 
+    private func removeStaleTarget(at index: Int) {
+        let target = targets[index]
+        removeObserver(for: target)
+        targets.remove(at: index)
+        if targets.isEmpty {
+            currentIndex = 0
+        } else if currentIndex >= targets.count {
+            currentIndex = targets.count - 1
+        }
+        print("[Waymark] Removed stale chrome tab: \(target.displayTitle). \(targets.count) remaining.")
+    }
+
     private func focusCurrentAndToast() {
-        guard currentIndex >= 0, currentIndex < targets.count else { return }
-        var target = targets[currentIndex]
+        var attempts = 0
+        while attempts < max(targets.count, 1) {
+            guard currentIndex >= 0, currentIndex < targets.count else { return }
+            var target = targets[currentIndex]
 
-        // Update title for window targets
-        if case .window(var w) = target {
-            windowManager.updateTitle(of: &w)
-            target = .window(w)
-            targets[currentIndex] = target
+            // Update title for window targets
+            if case .window(var w) = target {
+                windowManager.updateTitle(of: &w)
+                target = .window(w)
+                targets[currentIndex] = target
+            }
+
+            windowManager.focusWindow(target.parentWindow)
+            if case .chromeTab(_, let tab) = target {
+                if !chromeTabService.activateTab(tabId: tab.tabId) {
+                    // Tab closed — remove stale mark and try next
+                    removeStaleTarget(at: currentIndex)
+                    if targets.isEmpty {
+                        lastToastMessage = "Tab closed — mark removed"
+                        return
+                    }
+                    currentIndex = currentIndex % targets.count
+                    attempts += 1
+                    continue
+                }
+            }
+
+            lastToastMessage = "[\(currentIndex + 1)/\(targets.count)] \(targets[currentIndex].displayTitle)"
+            return
         }
-
-        windowManager.focusWindow(target.parentWindow)
-        if case .chromeTab(_, let tab) = target {
-            _ = chromeTabService.activateTab(url: tab.url)
-        }
-
-        lastToastMessage = "[\(currentIndex + 1)/\(targets.count)] \(targets[currentIndex].displayTitle)"
+        lastToastMessage = "All marks stale — cleared"
     }
 
     // MARK: - AXObserver Management

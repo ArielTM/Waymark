@@ -14,33 +14,34 @@ final class ChromeTabService {
         tell application "Google Chrome"
             if (count of windows) = 0 then return ""
             set t to active tab of window 1
-            return (URL of t) & "\\n" & (title of t)
+            return (id of t as text) & "\\n" & (URL of t) & "\\n" & (title of t)
         end tell
         """
         guard let result = runAppleScript(script) else { return nil }
-        let parts = result.split(separator: "\n", maxSplits: 1)
-        guard parts.count == 2 else { return nil }
-        let url = String(parts[0])
-        let title = String(parts[1])
+        let parts = result.split(separator: "\n", maxSplits: 2)
+        guard parts.count == 3, let tabId = Int(parts[0]) else { return nil }
+        let url = String(parts[1])
+        let title = String(parts[2])
         guard !url.isEmpty else { return nil }
-        return ChromeTabInfo(url: url, titleAtMark: title)
+        return ChromeTabInfo(tabId: tabId, url: url, titleAtMark: title)
     }
 
     // MARK: - Activate Tab
 
-    /// Activates the tab matching the given URL in Chrome's frontmost window.
-    /// Call after WindowManager.focusWindow() has raised the Chrome window.
-    func activateTab(url: String) -> Bool {
-        let escapedURL = url.replacingOccurrences(of: "\"", with: "\\\"")
+    /// Activates the tab with the given Chrome tab ID across all Chrome windows.
+    /// Brings the containing window to front if the tab is found.
+    func activateTab(tabId: Int) -> Bool {
         let script = """
         tell application "Google Chrome"
-            set w to window 1
-            set tabList to tabs of w
-            repeat with i from 1 to count of tabList
-                if URL of item i of tabList is "\(escapedURL)" then
-                    set active tab index of w to i
-                    return "true"
-                end if
+            repeat with w in windows
+                set tabList to tabs of w
+                repeat with i from 1 to count of tabList
+                    if id of item i of tabList is \(tabId) then
+                        set active tab index of w to i
+                        set index of w to 1
+                        return "true"
+                    end if
+                end repeat
             end repeat
             return "false"
         end tell
@@ -48,28 +49,27 @@ final class ChromeTabService {
         return runAppleScript(script) == "true"
     }
 
-    // MARK: - All Tab URLs (staleness check)
+    // MARK: - All Tab IDs (staleness check)
 
-    /// Returns all tab URLs across all Chrome windows.
-    func allTabURLs() -> Set<String> {
+    /// Returns all tab IDs across all Chrome windows.
+    func allTabIDs() -> Set<Int> {
         let script = """
         tell application "Google Chrome"
             if (count of windows) = 0 then return ""
-            set allURLs to {}
+            set allIDs to {}
             repeat with w in windows
                 repeat with t in tabs of w
-                    set end of allURLs to URL of t
+                    set end of allIDs to (id of t as text)
                 end repeat
             end repeat
             set AppleScript's text item delimiters to linefeed
-            set urlString to allURLs as text
+            set idString to allIDs as text
             set AppleScript's text item delimiters to ""
-            return urlString
+            return idString
         end tell
         """
         guard let result = runAppleScript(script), !result.isEmpty else { return [] }
-        let urls = result.split(separator: "\n", omittingEmptySubsequences: true).map(String.init)
-        return Set(urls)
+        return Set(result.split(separator: "\n", omittingEmptySubsequences: true).compactMap { Int($0) })
     }
 
     // MARK: - Detection
