@@ -16,6 +16,11 @@
 </p>
 
 <p align="center">
+  <b>The first macOS tool for bookmarking your attention — not your tabs, not your layout, your attention.</b><br>
+  Mark the windows you need to come back to, cycle through only those, forget the rest.
+</p>
+
+<p align="center">
   <img src="docs/assets/hero.gif" width="800" alt="Waymark demo: marking three windows and cycling through them with global hotkeys">
 </p>
 
@@ -156,6 +161,14 @@ Or open `Waymark.xcodeproj` in Xcode and hit Run.
 3. Optionally remove preferences: `defaults delete io.atrandom.Waymark`
 
 If installed via Homebrew: `brew uninstall waymark`
+
+## Contributing
+
+Contributions welcome! Check out the [open issues](https://github.com/ArielTM/Waymark/issues) — issues labeled **good first issue** are a great starting point.
+
+To build from source, see [Building from Source](#building-from-source) above.
+
+Found a bug? Have an idea? [Open an issue](https://github.com/ArielTM/Waymark/issues/new).
 
 ## License
 
