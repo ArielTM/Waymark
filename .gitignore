@@ -7,9 +7,6 @@ build/
 # xcodegen
 Waymark.xcodeproj/
 
-# Brainstorming visual companion
-***REMOVED***
-
 # Worktrees
 .worktrees/
 
