@@ -136,40 +136,41 @@ final class PalettePanelController {
 
     private func applyPosition(_ position: PalettePosition) {
         guard let screen = NSScreen.main, let panel else { return }
-        let visibleFrame = screen.visibleFrame
+        let screenFrame = screen.frame
+        let topY = screen.visibleFrame.maxY  // respect the menu bar
         let panelSize = panel.frame.size
 
         var origin: NSPoint
         switch position {
         case .topLeft:
             origin = NSPoint(
-                x: visibleFrame.minX + 10,
-                y: visibleFrame.maxY - panelSize.height - 10
+                x: screenFrame.minX + 10,
+                y: topY - panelSize.height - 10
             )
         case .centerLeft:
             origin = NSPoint(
-                x: visibleFrame.minX + 10,
-                y: visibleFrame.midY - panelSize.height / 2
+                x: screenFrame.minX + 10,
+                y: screenFrame.midY - panelSize.height / 2
             )
         case .bottomLeft:
             origin = NSPoint(
-                x: visibleFrame.minX + 10,
-                y: visibleFrame.minY + 10
+                x: screenFrame.minX + 10,
+                y: screenFrame.minY + 10
             )
         case .topRight:
             origin = NSPoint(
-                x: visibleFrame.maxX - panelSize.width - 10,
-                y: visibleFrame.maxY - panelSize.height - 10
+                x: screenFrame.maxX - panelSize.width - 10,
+                y: topY - panelSize.height - 10
             )
         case .centerRight:
             origin = NSPoint(
-                x: visibleFrame.maxX - panelSize.width - 10,
-                y: visibleFrame.midY - panelSize.height / 2
+                x: screenFrame.maxX - panelSize.width - 10,
+                y: screenFrame.midY - panelSize.height / 2
             )
         case .bottomRight:
             origin = NSPoint(
-                x: visibleFrame.maxX - panelSize.width - 10,
-                y: visibleFrame.minY + 10
+                x: screenFrame.maxX - panelSize.width - 10,
+                y: screenFrame.minY + 10
             )
         case .none:
             return
