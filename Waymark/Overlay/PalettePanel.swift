@@ -6,6 +6,9 @@ import SwiftUI
 
 enum PalettePosition: String, CaseIterable {
     case none = "none"
+    case topLeft = "topLeft"
+    case centerLeft = "centerLeft"
+    case bottomLeft = "bottomLeft"
     case topRight = "topRight"
     case centerRight = "centerRight"
     case bottomRight = "bottomRight"
@@ -13,6 +16,9 @@ enum PalettePosition: String, CaseIterable {
     var displayName: String {
         switch self {
         case .none: return "None (Hidden)"
+        case .topLeft: return "Top Left"
+        case .centerLeft: return "Center Left"
+        case .bottomLeft: return "Bottom Left"
         case .topRight: return "Top Right"
         case .centerRight: return "Center Right"
         case .bottomRight: return "Bottom Right"
@@ -135,20 +141,35 @@ final class PalettePanelController {
 
         var origin: NSPoint
         switch position {
+        case .topLeft:
+            origin = NSPoint(
+                x: visibleFrame.minX + 10,
+                y: visibleFrame.maxY - panelSize.height - 10
+            )
+        case .centerLeft:
+            origin = NSPoint(
+                x: visibleFrame.minX + 10,
+                y: visibleFrame.midY - panelSize.height / 2
+            )
+        case .bottomLeft:
+            origin = NSPoint(
+                x: visibleFrame.minX + 10,
+                y: visibleFrame.minY + 10
+            )
         case .topRight:
             origin = NSPoint(
                 x: visibleFrame.maxX - panelSize.width - 10,
                 y: visibleFrame.maxY - panelSize.height - 10
             )
-        case .bottomRight:
-            origin = NSPoint(
-                x: visibleFrame.maxX - panelSize.width - 10,
-                y: visibleFrame.minY + 10
-            )
         case .centerRight:
             origin = NSPoint(
                 x: visibleFrame.maxX - panelSize.width - 10,
                 y: visibleFrame.midY - panelSize.height / 2
+            )
+        case .bottomRight:
+            origin = NSPoint(
+                x: visibleFrame.maxX - panelSize.width - 10,
+                y: visibleFrame.minY + 10
             )
         case .none:
             return
