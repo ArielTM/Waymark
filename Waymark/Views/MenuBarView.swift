@@ -55,7 +55,21 @@ struct MenuBarView: View {
             }
         }
 
-        Toggle("Hide on Full Screen", isOn: $settings.hideOnFullScreen)
+        Menu("Full Screen Apps") {
+            ForEach(FullScreenMode.allCases, id: \.rawValue) { mode in
+                Button {
+                    settings.fullScreenMode = mode
+                } label: {
+                    HStack {
+                        Text(mode.displayName)
+                        if mode == settings.fullScreenMode {
+                            Spacer()
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        }
 
         Toggle("Launch at Login", isOn: Binding(
             get: { launchAtLogin },
