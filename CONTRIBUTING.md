@@ -8,7 +8,8 @@ Thanks for your interest in contributing!
 2. Clone your fork
 3. Install XcodeGen: `brew install xcodegen`
 4. Generate the project: `xcodegen generate`
-5. Build: `xcodebuild -scheme Waymark -configuration Debug build`
+5. Build: `xcodebuild -scheme Waymark -configuration Debug -derivedDataPath build build`
+   The built app is at `build/Build/Products/Debug/Waymark.app`.
    Or open `Waymark.xcodeproj` in Xcode and hit Run.
 
 ## Submitting Changes
