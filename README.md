@@ -94,7 +94,9 @@ Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked wind
 
 ### Floating Palette
 
-<!-- TODO: Add floating palette screenshot (docs/assets/palette.png) -->
+<p align="center">
+  <img src="docs/assets/palette.png" width="700" alt="Waymark floating palette pinned to the bottom-right corner of the screen, listing four marked windows over a VS Code editor, with an orange dot marking the currently focused window">
+</p>
 
 An always-visible list of your marked windows with app icons.
 
