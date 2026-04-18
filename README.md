@@ -71,7 +71,7 @@ Also: **Option + trackpad swipe** left/right to cycle.
 
 <table>
   <tr>
-    <td align="center" width="33%"><a href="#menu-bar"><img src="docs/assets/menu-bar.png" alt="Waymark menu bar dropdown"></a></td>
+    <td align="center" width="33%"><a href="#menu-bar"><img src="docs/assets/menu-bar.png" width="180" alt="Waymark menu bar dropdown"></a></td>
     <td align="center" width="33%"><a href="#exposé-panel"><img src="docs/assets/expose.png" alt="Waymark Exposé overlay"></a></td>
     <td align="center" width="33%"><a href="#floating-palette"><img src="docs/assets/palette.png" alt="Waymark floating palette"></a></td>
   </tr>
