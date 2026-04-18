@@ -2,6 +2,15 @@ import AppKit
 import ApplicationServices
 import Observation
 
+fileprivate func describe(_ target: WatchTarget) -> String {
+    switch target {
+    case .window(let w):
+        return "kind=window wid=\(w.id) pid=\(w.pid) title=\"\(target.displayTitle)\""
+    case .chromeTab(let w, let tab):
+        return "kind=chromeTab wid=\(w.id) pid=\(w.pid) tabID=\(tab.tabId) title=\"\(target.displayTitle)\""
+    }
+}
+
 @Observable
 @MainActor
 final class WatchlistManager {
@@ -42,6 +51,7 @@ final class WatchlistManager {
         // Check for existing entry to toggle off
         if let existingIndex = targets.firstIndex(where: { $0.id == target.id }) {
             let removed = targets[existingIndex]
+            DebugLog.log("watchlist", "evicting reason=userToggle \(describe(removed))")
             removeObserver(for: removed)
             targets.remove(at: existingIndex)
             if targets.isEmpty {
@@ -51,6 +61,7 @@ final class WatchlistManager {
             }
             lastToastMessage = "− Unmarked: \(removed.displayTitle) [\(targets.count) watched]"
         } else {
+            DebugLog.log("watchlist", "added \(describe(target))")
             targets.append(target)
             addObserver(for: target)
             lastToastMessage = "+ Marked: \(target.displayTitle) [\(targets.count) watched]"
@@ -87,11 +98,20 @@ final class WatchlistManager {
         guard index >= 0, index < targets.count else { return }
         currentIndex = index
         let target = targets[index]
+        let targetID = target.id
         windowManager.focusWindow(target.parentWindow)
         if case .chromeTab(_, let tab) = target {
-            if !chromeTabService.activateTab(tabId: tab.tabId) {
-                removeStaleTarget(at: index)
+            DebugLog.log("watchlist", "activateTab call site=focusTarget tabID=\(tab.tabId)")
+            switch chromeTabService.activateTab(tabId: tab.tabId) {
+            case .activated:
+                break
+            case .notFound:
+                removeStaleTarget(byID: targetID)
                 lastToastMessage = "Tab closed — mark removed"
+                return
+            case .callFailed:
+                DebugLog.log("watchlist", "activateTab callFailed — keeping mark id=\(targetID)")
+                lastToastMessage = "Chrome busy — try again"
                 return
             }
         }
@@ -100,6 +120,9 @@ final class WatchlistManager {
     // MARK: - Clear All
 
     func clearAll() {
+        for t in targets {
+            DebugLog.log("watchlist", "evicting reason=userClearAll \(describe(t))")
+        }
         removeAllObservers()
         targets.removeAll()
         currentIndex = 0
@@ -147,18 +170,43 @@ final class WatchlistManager {
             if case .chromeTab = $0 { return true }
             return false
         }
-        let liveTabIDs: Set<Int> = hasChromeTargets ? chromeTabService.allTabIDs() : []
+        let liveTabIDs: Set<Int>? = hasChromeTargets ? chromeTabService.allTabIDs() : []
+        let skipTabCheck = hasChromeTargets && liveTabIDs == nil
+
+        DebugLog.log("watchlist", "tick marks=\(targets.count) chromeMarks=\(hasChromeTargets) liveWindowIDs=\(liveIDs.count) liveTabIDs=\(liveTabIDs?.count ?? -1) skipTabCheck=\(skipTabCheck)")
 
         // Collect window IDs that are about to lose all their targets
         let windowIDsBefore = Set(targets.map(\.windowID))
 
         targets.removeAll { target in
+            let reason: String?
             switch target {
             case .window(let w):
-                return !liveIDs.contains(w.id)
+                reason = liveIDs.contains(w.id) ? nil : "windowIDMissing"
             case .chromeTab(let w, let tab):
-                return !liveIDs.contains(w.id) || !liveTabIDs.contains(tab.tabId)
+                let widMissing = !liveIDs.contains(w.id)
+                // If the AppleScript call failed (liveTabIDs == nil) we cannot
+                // distinguish "tab closed" from "Chrome momentarily unresponsive",
+                // so defer the tab-id check until the next tick. Only evict
+                // when the containing window itself is demonstrably gone.
+                let tabMissing: Bool
+                if let liveTabIDs {
+                    tabMissing = !liveTabIDs.contains(tab.tabId)
+                } else {
+                    tabMissing = false
+                }
+                switch (widMissing, tabMissing) {
+                case (true, true):   reason = "both"
+                case (true, false):  reason = "windowIDMissing"
+                case (false, true):  reason = "tabIDMissing"
+                case (false, false): reason = nil
+                }
             }
+            if let reason {
+                DebugLog.log("watchlist", "evicting reason=\(reason) \(describe(target))")
+                return true
+            }
+            return false
         }
 
         // Clean up observers for windows that no longer have any targets
@@ -183,6 +231,10 @@ final class WatchlistManager {
     func removeTargets(forPID pid: pid_t) {
         let windowIDs = Set(targets.filter { $0.pid == pid }.map(\.windowID))
         let before = targets.count
+        let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "nil"
+        for t in targets where t.pid == pid {
+            DebugLog.log("watchlist", "evicting reason=appTerminated bundleID=\(bundleID) \(describe(t))")
+        }
         targets.removeAll { $0.pid == pid }
 
         // Clean up observers for removed windows
@@ -208,6 +260,7 @@ final class WatchlistManager {
         guard !indicesToRemove.isEmpty else { return }
 
         for index in indicesToRemove.reversed() {
+            DebugLog.log("watchlist", "evicting reason=axDestroyed \(describe(targets[index]))")
             targets.remove(at: index)
         }
 
@@ -224,8 +277,16 @@ final class WatchlistManager {
 
     // MARK: - Private
 
-    private func removeStaleTarget(at index: Int) {
+    /// Remove a target by its stable identity. Idempotent — if the target
+    /// was already evicted by a re-entrant cleanup while the caller was
+    /// awaiting an AppleScript reply, this silently no-ops.
+    private func removeStaleTarget(byID id: String) {
+        guard let index = targets.firstIndex(where: { $0.id == id }) else {
+            DebugLog.log("watchlist", "removeStaleTarget skipped (already absent) id=\(id)")
+            return
+        }
         let target = targets[index]
+        DebugLog.log("watchlist", "evicting reason=activateTabFailed \(describe(target))")
         removeObserver(for: target)
         targets.remove(at: index)
         if targets.isEmpty {
@@ -249,11 +310,16 @@ final class WatchlistManager {
                 targets[currentIndex] = target
             }
 
+            let targetID = target.id
             windowManager.focusWindow(target.parentWindow)
             if case .chromeTab(_, let tab) = target {
-                if !chromeTabService.activateTab(tabId: tab.tabId) {
+                DebugLog.log("watchlist", "activateTab call site=cycle tabID=\(tab.tabId)")
+                switch chromeTabService.activateTab(tabId: tab.tabId) {
+                case .activated:
+                    break
+                case .notFound:
                     // Tab closed — remove stale mark and try next
-                    removeStaleTarget(at: currentIndex)
+                    removeStaleTarget(byID: targetID)
                     if targets.isEmpty {
                         lastToastMessage = "Tab closed — mark removed"
                         return
@@ -261,6 +327,12 @@ final class WatchlistManager {
                     currentIndex = currentIndex % targets.count
                     attempts += 1
                     continue
+                case .callFailed:
+                    // Transient Chrome/AppleScript error. Keep the mark,
+                    // surface a retryable toast, and abort this focus pass.
+                    DebugLog.log("watchlist", "activateTab callFailed — keeping mark id=\(targetID)")
+                    lastToastMessage = "Chrome busy — try again"
+                    return
                 }
             }
 
@@ -292,6 +364,7 @@ final class WatchlistManager {
         let callback: AXObserverCallback = { _, _, _, refcon in
             guard let refcon else { return }
             let wid = refcon.load(as: CGWindowID.self)
+            DebugLog.log("watchlist", "ax-destroyed-fired wid=\(wid)")
             DispatchQueue.main.async {
                 MainActor.assumeIsolated {
                     WatchlistManager.shared?.removeTarget(byWindowID: wid)

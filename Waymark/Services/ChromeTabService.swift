@@ -17,7 +17,7 @@ final class ChromeTabService {
             return (id of t as text) & "\\n" & (URL of t) & "\\n" & (title of t)
         end tell
         """
-        guard let result = runAppleScript(script) else { return nil }
+        guard let result = runAppleScript(script, tag: "getActiveTab") else { return nil }
         let parts = result.split(separator: "\n", maxSplits: 2)
         guard parts.count == 3, let tabId = Int(parts[0]) else { return nil }
         let url = String(parts[1])
@@ -35,46 +35,112 @@ final class ChromeTabService {
     /// integer-coercion quirk where numeric `is` against a 9+ digit tab ID
     /// literal silently fails to match Chrome's Apple-Event-delivered id,
     /// even though both values are the same integer.
-    func activateTab(tabId: Int) -> Bool {
+    enum ActivateResult {
+        case activated
+        case notFound
+        case callFailed
+    }
+
+    func activateTab(tabId: Int) -> ActivateResult {
+        // If any window's enumeration errors (Chrome's `-1719 Invalid index`
+        // while tab count changes mid-query), we skip that window but track
+        // the failure. A "partial|..." result means we cannot confirm the
+        // tab is gone, so the caller must not evict.
         let script = """
         tell application "Google Chrome"
+            set seenIDs to {}
+            set enumErrors to 0
             repeat with w in windows
-                set tabList to tabs of w
-                repeat with i from 1 to count of tabList
-                    if (id of item i of tabList as text) is "\(tabId)" then
-                        set active tab index of w to i
-                        set index of w to 1
-                        return "true"
-                    end if
-                end repeat
+                try
+                    set wIdx to index of w
+                    set i to 0
+                    repeat with t in tabs of w
+                        set i to i + 1
+                        set thisID to (id of t as text)
+                        set end of seenIDs to (wIdx as text) & ":" & thisID
+                        if thisID is "\(tabId)" then
+                            set active tab index of w to i
+                            set index of w to 1
+                            set AppleScript's text item delimiters to ","
+                            set idStr to seenIDs as text
+                            set AppleScript's text item delimiters to ""
+                            return "true|" & idStr
+                        end if
+                    end repeat
+                on error
+                    set enumErrors to enumErrors + 1
+                end try
             end repeat
-            return "false"
+            set AppleScript's text item delimiters to ","
+            set idStr to seenIDs as text
+            set AppleScript's text item delimiters to ""
+            if enumErrors > 0 then
+                return "partial|" & enumErrors & "|" & idStr
+            else
+                return "false|" & idStr
+            end if
         end tell
         """
-        return runAppleScript(script) == "true"
+        let raw = runAppleScript(script, tag: "activateTab")
+        DebugLog.log("chrome", "activateTab tabID=\(tabId) raw=\(raw.map { "\"\($0)\"" } ?? "nil")")
+        guard let raw else { return .callFailed }
+        if raw.hasPrefix("true|") { return .activated }
+        if raw.hasPrefix("partial|") { return .callFailed }
+        return .notFound
     }
 
     // MARK: - All Tab IDs (staleness check)
 
-    /// Returns all tab IDs across all Chrome windows.
-    func allTabIDs() -> Set<Int> {
+    /// Returns all tab IDs across all Chrome windows. Returns `nil` when the
+    /// AppleScript call itself failed (Chrome unresponsive, permission issue,
+    /// transient `-1719`, etc.). Callers must treat `nil` as "don't know" and
+    /// NOT as "Chrome has no tabs" — the two cases are data-loss-distinct.
+    func allTabIDs() -> Set<Int>? {
         let script = """
         tell application "Google Chrome"
-            if (count of windows) = 0 then return ""
+            if (count of windows) = 0 then return "OK|"
             set allIDs to {}
+            set enumErrors to 0
             repeat with w in windows
-                repeat with t in tabs of w
-                    set end of allIDs to (id of t as text)
-                end repeat
+                try
+                    repeat with t in tabs of w
+                        set end of allIDs to (id of t as text)
+                    end repeat
+                on error
+                    set enumErrors to enumErrors + 1
+                end try
             end repeat
+            if enumErrors > 0 then
+                return "PARTIAL|" & enumErrors
+            end if
             set AppleScript's text item delimiters to linefeed
             set idString to allIDs as text
             set AppleScript's text item delimiters to ""
-            return idString
+            return "OK|" & idString
         end tell
         """
-        guard let result = runAppleScript(script), !result.isEmpty else { return [] }
-        return Set(result.split(separator: "\n", omittingEmptySubsequences: true).compactMap { Int($0) })
+        guard let result = runAppleScript(script, tag: "allTabIDs") else {
+            DebugLog.log("chrome", "allTabIDs appleScriptFailed")
+            return nil
+        }
+        if result.hasPrefix("PARTIAL|") {
+            let errCount = result.dropFirst("PARTIAL|".count)
+            DebugLog.log("chrome", "allTabIDs partial enumerationErrors=\(errCount)")
+            return nil
+        }
+        guard result.hasPrefix("OK|") else {
+            DebugLog.log("chrome", "allTabIDs unexpectedResult raw=\"\(result)\"")
+            return nil
+        }
+        let body = String(result.dropFirst("OK|".count))
+        if body.isEmpty {
+            DebugLog.log("chrome", "allTabIDs emptyWindows")
+            return []
+        }
+        let ids = Set(body.split(separator: "\n", omittingEmptySubsequences: true).compactMap { Int($0) })
+        let sorted = ids.sorted().map(String.init).joined(separator: ",")
+        DebugLog.log("chrome", "allTabIDs ok count=\(ids.count) ids=[\(sorted)]")
+        return ids
     }
 
     // MARK: - Tab Titles (batch lookup by tab ID)
@@ -103,7 +169,7 @@ final class ChromeTabService {
             return s
         end tell
         """
-        guard let result = runAppleScript(script), !result.isEmpty else { return [:] }
+        guard let result = runAppleScript(script, tag: "tabTitles"), !result.isEmpty else { return [:] }
 
         var map: [Int: String] = [:]
         for line in result.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -122,12 +188,14 @@ final class ChromeTabService {
 
     // MARK: - Private
 
-    private func runAppleScript(_ source: String) -> String? {
+    private func runAppleScript(_ source: String, tag: String = "unknown") -> String? {
         let script = NSAppleScript(source: source)
         var error: NSDictionary?
         let result = script?.executeAndReturnError(&error)
         if let error {
-            let errorNumber = error[NSAppleScript.errorNumber] as? Int
+            let errorNumber = error[NSAppleScript.errorNumber] as? Int ?? 0
+            let message = error[NSAppleScript.errorMessage] as? String ?? ""
+            DebugLog.log("chrome", "appleScriptError tag=\(tag) code=\(errorNumber) message=\"\(message)\"")
             if errorNumber == -1743 {
                 print("[Waymark] AppleScript permission denied. Grant Automation access in System Settings.")
             } else {
