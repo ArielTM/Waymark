@@ -30,13 +30,18 @@ final class ChromeTabService {
 
     /// Activates the tab with the given Chrome tab ID across all Chrome windows.
     /// Brings the containing window to front if the tab is found.
+    ///
+    /// Note: the `id` comparison is done via `as text` to avoid an AppleScript
+    /// integer-coercion quirk where numeric `is` against a 9+ digit tab ID
+    /// literal silently fails to match Chrome's Apple-Event-delivered id,
+    /// even though both values are the same integer.
     func activateTab(tabId: Int) -> Bool {
         let script = """
         tell application "Google Chrome"
             repeat with w in windows
                 set tabList to tabs of w
                 repeat with i from 1 to count of tabList
-                    if id of item i of tabList is \(tabId) then
+                    if (id of item i of tabList as text) is "\(tabId)" then
                         set active tab index of w to i
                         set index of w to 1
                         return "true"
