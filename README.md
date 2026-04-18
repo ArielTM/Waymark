@@ -81,7 +81,9 @@ Also: **Option + trackpad swipe** left/right to cycle.
 
 ### Exposé Panel
 
-<!-- TODO: Add exposé panel screenshot (docs/assets/expose.png) -->
+<p align="center">
+  <img src="docs/assets/expose.png" width="700" alt="Waymark Exposé overlay: grid of four window thumbnails (VS Code, Claude, Ghostty, Chrome) with numbered badges, the first selected, and a hotkey hint bar along the bottom">
+</p>
 
 Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked windows.
 
