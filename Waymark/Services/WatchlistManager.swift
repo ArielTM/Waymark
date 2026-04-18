@@ -106,6 +106,36 @@ final class WatchlistManager {
         lastToastMessage = "Watchlist cleared"
     }
 
+    // MARK: - Refresh Titles
+
+    /// Re-reads current titles for all marked targets and mutates `targets[]`
+    /// in place. AX reads are near-free; Chrome is a single AppleScript call
+    /// batched over every marked tab. Mutating `targets[i]` fires `@Observable`
+    /// change notifications so SwiftUI views re-render.
+    func refreshAllTitles() async {
+        for i in targets.indices {
+            if case .window(var w) = targets[i] {
+                windowManager.updateTitle(of: &w)
+                targets[i] = .window(w)
+            }
+        }
+
+        let chromeTabIds: Set<Int> = Set(targets.compactMap {
+            if case .chromeTab(_, let tab) = $0 { return tab.tabId }
+            return nil
+        })
+        guard !chromeTabIds.isEmpty else { return }
+
+        let titles = chromeTabService.tabTitles(for: chromeTabIds)
+        for i in targets.indices {
+            if case .chromeTab(let w, var tab) = targets[i],
+               let fresh = titles[tab.tabId], fresh != tab.title {
+                tab.title = fresh
+                targets[i] = .chromeTab(w, tab)
+            }
+        }
+    }
+
     // MARK: - Stale Target Cleanup
 
     func removeStaleTargets() {

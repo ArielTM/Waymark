@@ -1,17 +1,17 @@
 import Foundation
 
-// MARK: - Full-Screen Mode
+// MARK: - Palette Visibility
 
-enum FullScreenMode: String, CaseIterable {
-    case alwaysShow = "alwaysShow"
-    case hoverReveal = "hoverReveal"
-    case alwaysHide = "alwaysHide"
+enum PaletteVisibility: String, CaseIterable {
+    case off = "off"
+    case hiddenInFullScreen = "hiddenInFullScreen"
+    case alwaysOn = "alwaysOn"
 
     var displayName: String {
         switch self {
-        case .alwaysShow: return "Always Show"
-        case .hoverReveal: return "Reveal on Hover"
-        case .alwaysHide: return "Always Hide"
+        case .off: return "Off"
+        case .hiddenInFullScreen: return "Hidden in Full-Screen Apps"
+        case .alwaysOn: return "Always"
         }
     }
 }
@@ -22,13 +22,14 @@ final class Settings {
 
     private enum Key {
         static let palettePosition = "palettePosition"
-        static let fullScreenMode = "paletteFullScreenMode"
+        static let paletteVisibility = "paletteVisibility"
+        static let legacyFullScreenMode = "paletteFullScreenMode"
         static let legacyHideOnFullScreen = "paletteHideOnFullScreen"
     }
 
     private static let defaults: [String: Any] = [
         Key.palettePosition: PalettePosition.topRight.rawValue,
-        Key.fullScreenMode: FullScreenMode.hoverReveal.rawValue,
+        Key.paletteVisibility: PaletteVisibility.alwaysOn.rawValue,
     ]
 
     // MARK: - Properties
@@ -37,25 +38,36 @@ final class Settings {
         didSet { UserDefaults.standard.set(palettePosition.rawValue, forKey: Key.palettePosition) }
     }
 
-    var fullScreenMode: FullScreenMode {
-        didSet { UserDefaults.standard.set(fullScreenMode.rawValue, forKey: Key.fullScreenMode) }
+    var paletteVisibility: PaletteVisibility {
+        didSet { UserDefaults.standard.set(paletteVisibility.rawValue, forKey: Key.paletteVisibility) }
     }
 
     // MARK: - Init
 
     init() {
-        // Migrate legacy paletteHideOnFullScreen (Bool) → fullScreenMode (enum).
-        // Legacy true  → .alwaysHide  (preserves old default behavior, minimum surprise).
-        // Legacy false → .alwaysShow  (preserves user's explicit choice).
-        // Do this BEFORE registering defaults so the "has user value?" check is accurate
-        // — `register(defaults:)` would make `object(forKey:)` return the default value.
         let defaults = UserDefaults.standard
+
+        // Legacy migration 1: paletteHideOnFullScreen (Bool) → paletteFullScreenMode (String).
+        // legacy true  → "alwaysHide", legacy false → "alwaysShow".
         if defaults.object(forKey: Key.legacyHideOnFullScreen) != nil,
-           defaults.object(forKey: Key.fullScreenMode) == nil {
+           defaults.object(forKey: Key.legacyFullScreenMode) == nil,
+           defaults.object(forKey: Key.paletteVisibility) == nil {
             let legacy = defaults.bool(forKey: Key.legacyHideOnFullScreen)
-            let migrated: FullScreenMode = legacy ? .alwaysHide : .alwaysShow
-            defaults.set(migrated.rawValue, forKey: Key.fullScreenMode)
+            defaults.set(legacy ? "alwaysHide" : "alwaysShow", forKey: Key.legacyFullScreenMode)
             defaults.removeObject(forKey: Key.legacyHideOnFullScreen)
+        }
+
+        // Legacy migration 2: paletteFullScreenMode (FullScreenMode) → paletteVisibility (PaletteVisibility).
+        // alwaysShow  → alwaysOn, hoverReveal → alwaysOn, alwaysHide → hiddenInFullScreen.
+        if let legacyMode = defaults.string(forKey: Key.legacyFullScreenMode),
+           defaults.object(forKey: Key.paletteVisibility) == nil {
+            let migrated: PaletteVisibility
+            switch legacyMode {
+            case "alwaysHide": migrated = .hiddenInFullScreen
+            default: migrated = .alwaysOn
+            }
+            defaults.set(migrated.rawValue, forKey: Key.paletteVisibility)
+            defaults.removeObject(forKey: Key.legacyFullScreenMode)
         }
 
         defaults.register(defaults: Self.defaults)
@@ -63,7 +75,7 @@ final class Settings {
         let posRaw = defaults.string(forKey: Key.palettePosition) ?? ""
         self.palettePosition = PalettePosition(rawValue: posRaw) ?? .topRight
 
-        let modeRaw = defaults.string(forKey: Key.fullScreenMode) ?? ""
-        self.fullScreenMode = FullScreenMode(rawValue: modeRaw) ?? .hoverReveal
+        let visRaw = defaults.string(forKey: Key.paletteVisibility) ?? ""
+        self.paletteVisibility = PaletteVisibility(rawValue: visRaw) ?? .alwaysOn
     }
 }

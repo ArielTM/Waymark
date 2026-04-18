@@ -60,6 +60,10 @@ final class ExposePanelController {
         NSApp.activate()
 
         self.panel = exposePanel
+
+        // Refresh titles in place while the panel is visible — cached titles
+        // render instantly, fresh ones arrive ~50–200ms later.
+        Task { await watchlistManager.refreshAllTitles() }
     }
 
     func dismiss() {

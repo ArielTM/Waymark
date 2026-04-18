@@ -146,7 +146,7 @@ struct WindowThumbnailCell: View {
     private var subtitle: String {
         switch target {
         case .window(let w): return w.title
-        case .chromeTab(_, let tab): return tab.titleAtMark
+        case .chromeTab(_, let tab): return tab.title
         }
     }
 

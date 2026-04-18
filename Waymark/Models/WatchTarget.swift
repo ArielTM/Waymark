@@ -3,7 +3,7 @@ import AppKit
 struct ChromeTabInfo {
     let tabId: Int
     let url: String
-    let titleAtMark: String
+    var title: String
 }
 
 enum WatchTarget: Identifiable {
@@ -24,7 +24,7 @@ enum WatchTarget: Identifiable {
         case .window(let w):
             return w.displayTitle
         case .chromeTab(_, let tab):
-            return tab.titleAtMark
+            return tab.title
         }
     }
 

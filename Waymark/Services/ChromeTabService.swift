@@ -23,7 +23,7 @@ final class ChromeTabService {
         let url = String(parts[1])
         let title = String(parts[2])
         guard !url.isEmpty else { return nil }
-        return ChromeTabInfo(tabId: tabId, url: url, titleAtMark: title)
+        return ChromeTabInfo(tabId: tabId, url: url, title: title)
     }
 
     // MARK: - Activate Tab
@@ -75,6 +75,43 @@ final class ChromeTabService {
         """
         guard let result = runAppleScript(script), !result.isEmpty else { return [] }
         return Set(result.split(separator: "\n", omittingEmptySubsequences: true).compactMap { Int($0) })
+    }
+
+    // MARK: - Tab Titles (batch lookup by tab ID)
+
+    /// Returns current titles for the given tab IDs across all Chrome windows.
+    /// Tabs that no longer exist are simply absent from the result.
+    ///
+    /// The record-literal delimiter is ASCII US (0x1F) so newlines and tabs
+    /// inside titles pass through without collision.
+    func tabTitles(for tabIds: Set<Int>) -> [Int: String] {
+        guard !tabIds.isEmpty else { return [:] }
+
+        let sep = "\u{001F}"  // ASCII US, safe separator
+        let script = """
+        tell application "Google Chrome"
+            if (count of windows) = 0 then return ""
+            set out to {}
+            repeat with w in windows
+                repeat with t in tabs of w
+                    set end of out to (id of t as text) & "\(sep)" & (title of t)
+                end repeat
+            end repeat
+            set AppleScript's text item delimiters to linefeed
+            set s to out as text
+            set AppleScript's text item delimiters to ""
+            return s
+        end tell
+        """
+        guard let result = runAppleScript(script), !result.isEmpty else { return [:] }
+
+        var map: [Int: String] = [:]
+        for line in result.split(separator: "\n", omittingEmptySubsequences: true) {
+            let parts = line.split(separator: Character(sep), maxSplits: 1, omittingEmptySubsequences: false)
+            guard parts.count == 2, let id = Int(parts[0]), tabIds.contains(id) else { continue }
+            map[id] = String(parts[1])
+        }
+        return map
     }
 
     // MARK: - Detection

@@ -9,6 +9,7 @@ final class AppState: ObservableObject {
     let gestureManager = GestureManager()
     let paletteController = PalettePanelController()
     let chromeTabService = ChromeTabService()
+    private var statusBarController: StatusBarController?
     private var permissionTimer: Timer?
     private var cleanupTimer: Timer?
 
@@ -22,6 +23,13 @@ final class AppState: ObservableObject {
             let axTrusted = AXIsProcessTrusted()
             let inputAccess = CGPreflightListenEventAccess()
             NSLog("[Waymark] AXIsProcessTrusted: %d, CGPreflightListenEventAccess: %d", axTrusted ? 1 : 0, inputAccess ? 1 : 0)
+
+            // Always install the status item so the user sees the app in the menu bar,
+            // even before permissions are granted.
+            self.statusBarController = StatusBarController(
+                watchlistManager: self.watchlistManager,
+                settings: self.settings
+            )
 
             if axTrusted && inputAccess {
                 self.startServices()
@@ -40,6 +48,7 @@ final class AppState: ObservableObject {
         startCleanupTimer()
         startAppTerminationObserver()
         startPalette()
+        startToastBridge()
         wireGestures()
         gestureManager.start()
     }
@@ -144,6 +153,28 @@ final class AppState: ObservableObject {
         }
     }
 
+    /// Bridge `WatchlistManager.lastToastMessage` → `ToastOverlay` using
+    /// `withObservationTracking`. Previously this was done via SwiftUI
+    /// `.onChange` inside the MenuBarExtra scene; now that the status item is
+    /// AppKit-owned, we observe directly.
+    private func startToastBridge() {
+        observeToast()
+    }
+
+    private func observeToast() {
+        withObservationTracking {
+            _ = watchlistManager.lastToastMessage
+        } onChange: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                if let message = self.watchlistManager.lastToastMessage {
+                    ToastOverlay.shared.show(message: message)
+                }
+                self.observeToast()
+            }
+        }
+    }
+
     private func startAppTerminationObserver() {
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didTerminateApplicationNotification,
@@ -163,21 +194,12 @@ struct WaymarkApp: App {
     @StateObject private var appState = AppState()
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuBarView(watchlistManager: appState.watchlistManager, settings: appState.settings)
-        } label: {
-            let count = appState.watchlistManager.targets.count
-            Label {
-                Text(count > 0 ? "\(count)" : "")
-            } icon: {
-                Image(nsImage: CairnIcon.menuBarImage(filled: count > 0))
-            }
-        }
-        .menuBarExtraStyle(.menu)
-        .onChange(of: appState.watchlistManager.lastToastMessage) { _, newValue in
-            if let message = newValue {
-                ToastOverlay.shared.show(message: message)
-            }
+        // Menu bar UI is owned by AppKit (StatusBarController). This scene only
+        // exists to satisfy SwiftUI's requirement for at least one Scene in an
+        // @main App. LSUIElement=true in Info.plist keeps the app dockless.
+        // Using SwiftUI.Settings disambiguates from our `Settings` model.
+        SwiftUI.Settings {
+            EmptyView()
         }
     }
 }

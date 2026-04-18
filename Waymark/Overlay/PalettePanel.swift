@@ -89,7 +89,11 @@ final class PalettePanelController {
     private var currentPosition: PalettePosition = .topRight
     private var lastTargetCount: Int = 0
 
-    // Hover state (only meaningful inside hoverReveal + full-screen).
+    // Weak ref so hoverTick can fire a title refresh without keeping the
+    // WatchlistManager alive past app teardown.
+    private weak var watchlistManager: WatchlistManager?
+
+    // Hover state.
     private var hoverTimer: Timer?
     private var hoverExpanded = false
     private var dwellStart: Date?
@@ -97,39 +101,22 @@ final class PalettePanelController {
     private let collapseDwell: TimeInterval = 0.25
 
     func update(watchlistManager: WatchlistManager, settings: Settings) {
+        self.watchlistManager = watchlistManager
+
         let position = settings.palettePosition
         let targets = watchlistManager.targets
 
-        // Nothing to show.
-        if position == .none || targets.isEmpty {
+        if position == .none || targets.isEmpty || settings.paletteVisibility == .off {
             hideAll()
             return
         }
 
-        let isFullScreen = Self.isFrontmostAppFullScreen()
-
-        if isFullScreen {
-            switch settings.fullScreenMode {
-            case .alwaysHide:
-                hideAll()
-                return
-            case .alwaysShow:
-                stopHoverTracking()
-                hoverExpanded = false
-                pillPanel?.orderOut(nil)
-                showPalette(position: position, watchlistManager: watchlistManager, targetCount: targets.count)
-                return
-            case .hoverReveal:
-                showHoverReveal(position: position, watchlistManager: watchlistManager, targetCount: targets.count)
-                return
-            }
+        if settings.paletteVisibility == .hiddenInFullScreen && Self.isFrontmostAppFullScreen() {
+            hideAll()
+            return
         }
 
-        // Normal desktop: always show palette, tear down hover state.
-        stopHoverTracking()
-        hoverExpanded = false
-        pillPanel?.orderOut(nil)
-        showPalette(position: position, watchlistManager: watchlistManager, targetCount: targets.count)
+        showHoverReveal(position: position, watchlistManager: watchlistManager, targetCount: targets.count)
     }
 
     func stop() {
@@ -169,20 +156,6 @@ final class PalettePanelController {
             if !(pillPanel?.isVisible ?? false) {
                 pillPanel?.orderFrontRegardless()
             }
-        }
-    }
-
-    private func showPalette(position: PalettePosition,
-                             watchlistManager: WatchlistManager,
-                             targetCount: Int) {
-        ensurePanel(watchlistManager: watchlistManager)
-        if position != currentPosition {
-            applyPosition(position)
-            currentPosition = position
-        }
-        resizePaletteIfNeeded(targetCount: targetCount)
-        if !(panel?.isVisible ?? false) {
-            panel?.orderFrontRegardless()
         }
     }
 
@@ -382,6 +355,10 @@ final class PalettePanelController {
                     dwellStart = nil
                     pillPanel?.orderOut(nil)
                     panel?.orderFrontRegardless()
+                    // Fresh titles when the palette is actually seen.
+                    if let wm = watchlistManager {
+                        Task { await wm.refreshAllTitles() }
+                    }
                 }
             }
         }
