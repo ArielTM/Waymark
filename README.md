@@ -72,7 +72,7 @@ Also: **Option + trackpad swipe** left/right to cycle.
 ### Menu Bar
 
 <p align="center">
-  <img src="docs/assets/menu-bar.png" width="420" alt="Waymark menu bar dropdown listing four marked windows with app icons, plus Palette Position, Launch at Login, and Clear All options">
+  <img src="docs/assets/menu-bar.png" width="300" alt="Waymark menu bar dropdown listing four marked windows with app icons, plus Palette Position, Launch at Login, and Clear All options">
 </p>
 
 - Cairn icon: outline when empty, filled + count when marks exist
