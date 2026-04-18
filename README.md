@@ -69,21 +69,26 @@ Also: **Option + trackpad swipe** left/right to cycle.
 
 ## Usage
 
-### Menu Bar
+<table>
+  <tr>
+    <td align="center" width="33%"><a href="#menu-bar"><img src="docs/assets/menu-bar.png" alt="Waymark menu bar dropdown"></a></td>
+    <td align="center" width="33%"><a href="#exposé-panel"><img src="docs/assets/expose.png" alt="Waymark Exposé overlay"></a></td>
+    <td align="center" width="33%"><a href="#floating-palette"><img src="docs/assets/palette.png" alt="Waymark floating palette"></a></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Menu Bar</b><br><sub>click the cairn icon</sub></td>
+    <td align="center"><b>Exposé Panel</b><br><sub><code>⌃⌥L</code></sub></td>
+    <td align="center"><b>Floating Palette</b><br><sub>always visible</sub></td>
+  </tr>
+</table>
 
-<p align="center">
-  <img src="docs/assets/menu-bar.png" width="300" alt="Waymark menu bar dropdown listing four marked windows with app icons, plus Palette Position, Launch at Login, and Clear All options">
-</p>
+### Menu Bar
 
 - Cairn icon: outline when empty, filled + count when marks exist
 - Click to see the list, focus any window, or clear all
 - Toggle **Launch at Login**
 
 ### Exposé Panel
-
-<p align="center">
-  <img src="docs/assets/expose.png" width="700" alt="Waymark Exposé overlay: grid of four window thumbnails (VS Code, Claude, Ghostty, Chrome) with numbered badges, the first selected, and a hotkey hint bar along the bottom">
-</p>
 
 Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked windows.
 
@@ -93,10 +98,6 @@ Press `⌃⌥L` to show a full-screen overlay with thumbnails of all marked wind
 - **Escape** or click outside to dismiss
 
 ### Floating Palette
-
-<p align="center">
-  <img src="docs/assets/palette.png" width="700" alt="Waymark floating palette pinned to the bottom-right corner of the screen, listing four marked windows over a VS Code editor, with an orange dot marking the currently focused window">
-</p>
 
 An always-visible list of your marked windows with app icons.
 
