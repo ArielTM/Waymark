@@ -22,7 +22,6 @@ final class AppState: ObservableObject {
         DispatchQueue.main.async { [self] in
             let axTrusted = AXIsProcessTrusted()
             let inputAccess = CGPreflightListenEventAccess()
-            NSLog("[Waymark] AXIsProcessTrusted: %d, CGPreflightListenEventAccess: %d", axTrusted ? 1 : 0, inputAccess ? 1 : 0)
 
             // Always install the status item so the user sees the app in the menu bar,
             // even before permissions are granted.
@@ -33,9 +32,7 @@ final class AppState: ObservableObject {
 
             if axTrusted && inputAccess {
                 self.startServices()
-                NSLog("[Waymark] Services started")
             } else {
-                NSLog("[Waymark] Requesting permissions")
                 self.requestPermissions(axTrusted: axTrusted, inputAccess: inputAccess)
                 self.startPermissionPolling()
             }
@@ -109,13 +106,10 @@ final class AppState: ObservableObject {
             MainActor.assumeIsolated {
                 let ax = AXIsProcessTrusted()
                 let input = CGPreflightListenEventAccess()
-                NSLog("[Waymark] Polling — AX: %d, Input: %d", ax ? 1 : 0, input ? 1 : 0)
                 if ax && input {
-                    NSLog("[Waymark] All permissions granted")
                     self?.permissionTimer?.invalidate()
                     self?.permissionTimer = nil
                     self?.startServices()
-                    NSLog("[Waymark] Services started")
                 }
             }
         }

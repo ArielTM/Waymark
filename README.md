@@ -48,7 +48,7 @@ Waymark lets you mark the windows you care about and ignore everything else. One
 **Homebrew:**
 
 ```bash
-brew install --cask atrandom/tap/waymark
+brew install --cask ArielTM/tap/waymark
 ```
 
 **Manual:** Download the latest `.dmg` from [GitHub Releases](https://github.com/ArielTM/Waymark/releases), open it, drag **Waymark** to **Applications**.

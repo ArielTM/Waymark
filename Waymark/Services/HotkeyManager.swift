@@ -32,7 +32,6 @@ final class HotkeyManager: @unchecked Sendable {
         self.runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
         CGEvent.tapEnable(tap: tap, enable: true)
-        NSLog("[Waymark] Event tap created and enabled successfully")
     }
 
     func stop() {

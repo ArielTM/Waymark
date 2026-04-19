@@ -163,7 +163,6 @@ final class WatchlistManager {
 
     func removeStaleTargets() {
         let liveIDs = windowManager.getAllWindowIDs()
-        let before = targets.count
 
         // Only query Chrome if there are chrome tab targets
         let hasChromeTargets = targets.contains {
@@ -220,17 +219,11 @@ final class WatchlistManager {
         } else if currentIndex >= targets.count {
             currentIndex = targets.count - 1
         }
-
-        let removed = before - targets.count
-        if removed > 0 {
-            print("[Waymark] Removed \(removed) stale target(s). \(targets.count) remaining.")
-        }
     }
 
     /// Remove all targets belonging to a terminated application.
     func removeTargets(forPID pid: pid_t) {
         let windowIDs = Set(targets.filter { $0.pid == pid }.map(\.windowID))
-        let before = targets.count
         let bundleID = NSRunningApplication(processIdentifier: pid)?.bundleIdentifier ?? "nil"
         for t in targets where t.pid == pid {
             DebugLog.log("watchlist", "evicting reason=appTerminated bundleID=\(bundleID) \(describe(t))")
@@ -246,11 +239,6 @@ final class WatchlistManager {
             currentIndex = 0
         } else if currentIndex >= targets.count {
             currentIndex = targets.count - 1
-        }
-
-        let removed = before - targets.count
-        if removed > 0 {
-            print("[Waymark] App terminated (PID \(pid)). Removed \(removed) target(s).")
         }
     }
 
@@ -271,8 +259,6 @@ final class WatchlistManager {
         } else if currentIndex >= targets.count {
             currentIndex = targets.count - 1
         }
-
-        print("[Waymark] Window \(windowID) destroyed. \(targets.count) remaining.")
     }
 
     // MARK: - Private
@@ -294,7 +280,6 @@ final class WatchlistManager {
         } else if currentIndex >= targets.count {
             currentIndex = targets.count - 1
         }
-        print("[Waymark] Removed stale chrome tab: \(target.displayTitle). \(targets.count) remaining.")
     }
 
     private func focusCurrentAndToast() {

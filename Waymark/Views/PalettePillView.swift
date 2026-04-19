@@ -1,8 +1,8 @@
 import AppKit
 
 // Pure AppKit pill view: orange dot + mark count on a blurred rounded pill.
-// Kept AppKit-only to avoid the NSHostingView constraint-crash pattern seen in
-// other HUD panels (see rejected-approaches §AppKit + SwiftUI Integration).
+// Kept AppKit-only to avoid NSHostingView Auto Layout constraint crashes
+// observed when embedding SwiftUI in transient HUD panels.
 final class PalettePillView: NSView {
     static let height: CGFloat = 20
 
