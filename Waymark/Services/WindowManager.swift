@@ -113,24 +113,27 @@ final class WindowManager {
     // MARK: - Thumbnail Capture
 
     func captureThumbnail(for window: WatchedWindow, size: CGSize) async -> NSImage? {
-        do {
-            let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
-            guard let scWindow = content.windows.first(where: { $0.windowID == window.id }) else {
-                return nil
-            }
-
-            let filter = SCContentFilter(desktopIndependentWindow: scWindow)
-            let config = SCStreamConfiguration()
-            config.width = Int(size.width) * 2  // Retina
-            config.height = Int(size.height) * 2
-            config.showsCursor = false
-            config.captureResolution = .best
-
-            let image = try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
-            return NSImage(cgImage: image, size: size)
-        } catch {
+        let pixelSize = CGSize(width: size.width * 2, height: size.height * 2)
+        guard let cgImage = try? await Self.captureCGImage(windowID: window.id, pixelSize: pixelSize) else {
             return nil
         }
+        return NSImage(cgImage: cgImage, size: size)
+    }
+
+    private nonisolated static func captureCGImage(windowID: CGWindowID, pixelSize: CGSize) async throws -> CGImage? {
+        let content = try await SCShareableContent.excludingDesktopWindows(true, onScreenWindowsOnly: false)
+        guard let scWindow = content.windows.first(where: { $0.windowID == windowID }) else {
+            return nil
+        }
+
+        let filter = SCContentFilter(desktopIndependentWindow: scWindow)
+        let config = SCStreamConfiguration()
+        config.width = Int(pixelSize.width)
+        config.height = Int(pixelSize.height)
+        config.showsCursor = false
+        config.captureResolution = .best
+
+        return try await SCScreenshotManager.captureImage(contentFilter: filter, configuration: config)
     }
 
     // MARK: - Private Helpers
