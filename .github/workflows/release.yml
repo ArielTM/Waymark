@@ -79,6 +79,26 @@ jobs:
             ${{ steps.sha.outputs.sha256 }}
             ```
 
+      - name: Bump cask in ArielTM/homebrew-tap
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.WAYMARK_TAP_PUSH_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA: ${{ steps.sha.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/ArielTM/homebrew-tap.git" tap
+          cd tap
+          sed -i '' "s/version \".*\"/version \"${VERSION}\"/" Casks/waymark.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"${SHA}\"/" Casks/waymark.rb
+          if git diff --quiet; then
+            echo "Cask already at ${VERSION}; nothing to push."
+            exit 0
+          fi
+          git -c user.email=github-actions@github.com -c user.name=github-actions \
+            commit -am "Bump waymark to ${VERSION}"
+          git push
+
       # --- Notarization (uncomment when Apple Developer account is available) ---
       # - name: Notarize
       #   if: startsWith(github.ref, 'refs/tags/v')
